@@ -12,6 +12,8 @@ import {
 
 import { POSTS_LOCAIS } from './mock/posts.js';
 import { MATERIAS_LOCAIS } from './mock/subjects.js';
+import { COMENTARIOS_LOCAIS } from './mock/comments.js';
+import { USUARIO_ATUAL } from './mock/sessao.js';
 
 /** Erro de rede ou de resposta da API, carregando o status HTTP quando existir. */
 export class ErroDeApi extends Error {
@@ -105,8 +107,49 @@ export async function buscarPost(id) {
 
 /** Cria uma publicação e devolve o registro salvo. */
 export async function criarPost(dados) {
+    if (USAR_DADOS_LOCAIS) {
+        const materia = MATERIAS_LOCAIS.find((item) => item.id === dados.id_subject);
+
+        const novoPost = {
+            id: Math.max(...POSTS_LOCAIS.map((post) => post.id)) + 1,
+            title: dados.title,
+            content: dados.content,
+            image_url: null,
+            likes: 0,
+            dislikes: 0,
+            created_at: new Date().toISOString(),
+            author: USUARIO_ATUAL,
+            subject: materia ?? { id: dados.id_subject, subject: 'Matéria' },
+            comments_count: 0
+        };
+
+        POSTS_LOCAIS.unshift(novoPost);
+        return novoPost;
+    }
+
     return requisitar('/api/posts', {
         method: 'POST',
         body: JSON.stringify(dados)
+    });
+}
+
+/** Devolve os comentários de uma publicação, já com as respostas aninhadas. */
+export async function listarComentarios(idPost) {
+    if (USAR_DADOS_LOCAIS) return COMENTARIOS_LOCAIS[Number(idPost)] ?? [];
+    return requisitar(`/api/posts/${idPost}/comments`);
+}
+
+/** Autentica o usuário. O token volta em cookie definido pelo servidor. */
+export async function entrar(credenciais) {
+    if (USAR_DADOS_LOCAIS) {
+        if (!credenciais.username || !credenciais.password) {
+            throw new ErroDeApi('Informe usuário e senha.', 400);
+        }
+        return { ...USUARIO_ATUAL, username: credenciais.username };
+    }
+
+    return requisitar('/api/login', {
+        method: 'POST',
+        body: JSON.stringify(credenciais)
     });
 }

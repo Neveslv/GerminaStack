@@ -5,43 +5,85 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Feed | GerminaStack</title>
-    <meta name="description" content="Espaço onde os alunos discutem os conteúdos vistos em sala e tiram dúvidas." />
+    <meta name="description"
+        content="Onde a turma do Germinare discute os conteudos vistos em sala, tira duvidas e compartilha material." />
     <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
     <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
-    <script type="module" src="/static/js/main.js"></script>
+    <script type="module" src="/static/js/pages/feed.js"></script>
 </head>
 
 <body>
-    <a class="gs-skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <a class="gs-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
 
     <header class="gs-topbar">
-        <p class="gs-topbar-brand">GerminaStack</p>
+        <a class="gs-brand" href="/">
+            <span class="gs-brand-mark">GS</span>
+            <span>GerminaStack</span>
+        </a>
 
-        <nav class="gs-topbar-nav" aria-label="Navegação principal">
-            <ul>
-                <li><a href="index.html" aria-current="page">Feed</a></li>
-                <li><a href="publicar.html">Publicar</a></li>
-                <li><a href="login.html">Entrar</a></li>
-            </ul>
+        <nav class="gs-nav" aria-label="Navegação principal">
+            <a class="gs-nav-link is-active" href="/" aria-current="page">Feed</a>
+            <a class="gs-nav-link" href="/publicar">Publicar</a>
+            <a class="gs-nav-link" href="/login">Entrar</a>
         </nav>
     </header>
 
-    <main class="gs-page" id="conteudo">
-        <h1>Feed da escola</h1>
-        <p>Dúvidas, resumos e discussões sobre o que foi visto em sala.</p>
+    <main class="gs-page" id="conteudo-principal">
+        <section class="gs-hero">
+            <div>
+                <span class="gs-kicker">Comunidade Germinare</span>
+                <h1>O que a turma aprendeu em sala, germina aqui.</h1>
+                <p>
+                    Um espaço para tirar dúvidas, compartilhar resumos e revisar conteúdo com quem está
+                    na mesma matéria que você — sem se perder em grupo de WhatsApp.
+                </p>
 
-        <section aria-labelledby="titulo-feed">
-            <h2 id="titulo-feed">Publicações recentes</h2>
+                <div class="gs-hero-stats" id="estatisticas">
+                    <span><strong id="stat-posts">—</strong> publicações</span>
+                    <span><strong id="stat-materias">—</strong> matérias ativas</span>
+                    <span><strong id="stat-respostas">—</strong> respostas da turma</span>
+                </div>
 
-            <p class="gs-alert" id="status-feed" role="status" aria-live="polite" hidden></p>
-
-            <ul class="gs-stack" id="feed"></ul>
+                <div class="gs-hero-actions">
+                    <a class="gs-btn gs-btn-primary" href="/publicar">Fazer uma publicação</a>
+                    <a class="gs-btn gs-btn-secondary" href="#materias">Ver matérias</a>
+                </div>
+            </div>
         </section>
-    </main>
 
-    <footer class="gs-footer">
-        <p>GerminaStack — projeto da disciplina de Desenvolvimento de Aplicações Dinâmicas.</p>
-    </footer>
+        <div class="gs-layout-demo">
+            <div class="gs-stack">
+                <label class="gs-form-group" for="busca">
+                    <span class="gs-label">Buscar publicação</span>
+                    <input class="gs-input" type="search" id="busca" name="busca"
+                        placeholder="Ex.: equação, fotossíntese, análise sintática" autocomplete="off"
+                        aria-describedby="dica-busca" />
+                    <span class="gs-form-hint" id="dica-busca">A lista filtra conforme você digita.</span>
+                </label>
+
+                <section aria-labelledby="titulo-feed">
+                    <h2 class="gs-sr-only" id="titulo-feed">Publicações</h2>
+
+                    <div id="estado-feed" role="status" aria-live="polite" hidden></div>
+
+                    <div class="gs-stack" id="feed"></div>
+                </section>
+            </div>
+
+            <aside class="gs-stack" id="materias" aria-labelledby="titulo-materias">
+                <section class="gs-side-card">
+                    <h2 class="gs-side-title" id="titulo-materias">Matérias</h2>
+                    <div class="gs-side-list" id="lista-materias"></div>
+                </section>
+
+                <section class="gs-callout is-info">
+                    <strong>Dica</strong>
+                    <p>Use <span class="gs-doc-inline-code">@usuario</span> em uma publicação ou resposta para marcar um
+                        colega.</p>
+                </section>
+            </aside>
+        </div>
+    </main>
 </body>
 
 </html>

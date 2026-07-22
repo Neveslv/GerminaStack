@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entrar | GerminaStack</title>
+    <meta name="description" content="Entre com sua conta do Germinare para publicar e responder." />
+    <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
+    <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/pages/login.js"></script>
+</head>
+
+<body>
+    <a class="gs-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+    <header class="gs-topbar">
+        <a class="gs-brand" href="/">
+            <span class="gs-brand-mark">GS</span>
+            <span>GerminaStack</span>
+        </a>
+
+        <nav class="gs-nav" aria-label="Navegação principal">
+            <a class="gs-nav-link" href="/">Feed</a>
+        </nav>
+    </header>
+
+    <main class="gs-page" id="conteudo-principal">
+        <div style="max-width: 26rem; margin: 0 auto;">
+            <div class="gs-section-head">
+                <h1>Entrar</h1>
+                <p>Use o mesmo usuário do sistema da escola.</p>
+            </div>
+
+            <div id="estado-login" role="status" aria-live="polite" hidden></div>
+
+            <div class="gs-card">
+                <form class="gs-stack" id="form-login" novalidate>
+                    <label class="gs-form-group" for="usuario">
+                        <span class="gs-label">Usuário</span>
+                        <input class="gs-input" type="text" id="usuario" name="usuario" required autocomplete="username"
+                            aria-describedby="erro-usuario" />
+                        <span class="gs-form-error" id="erro-usuario" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="senha">
+                        <span class="gs-label">Senha</span>
+                        <input class="gs-input" type="password" id="senha" name="senha" required
+                            autocomplete="current-password" aria-describedby="erro-senha" />
+                        <span class="gs-form-error" id="erro-senha" role="alert"></span>
+                    </label>
+
+                    <button class="gs-btn gs-btn-primary" type="submit">Entrar</button>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

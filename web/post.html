@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Publicação | GerminaStack</title>
+    <meta name="description" content="Discussao completa da publicacao, com as respostas da turma." />
+    <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
+    <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/pages/post.js"></script>
+</head>
+
+<body>
+    <a class="gs-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+    <header class="gs-topbar">
+        <a class="gs-brand" href="/">
+            <span class="gs-brand-mark">GS</span>
+            <span>GerminaStack</span>
+        </a>
+
+        <nav class="gs-nav" aria-label="Navegação principal">
+            <a class="gs-nav-link" href="/">Feed</a>
+            <a class="gs-nav-link" href="/publicar">Publicar</a>
+            <a class="gs-nav-link" href="/login">Entrar</a>
+        </nav>
+    </header>
+
+    <main class="gs-page" id="conteudo-principal">
+        <div class="gs-stack" style="max-width: 42rem; margin: 0 auto;">
+            <p><a href="/">← Voltar para o feed</a></p>
+
+            <div id="estado-post" role="status" aria-live="polite" hidden></div>
+
+            <div id="publicacao"></div>
+
+            <section class="gs-stack" aria-labelledby="titulo-respostas">
+                <h2 class="gs-side-title" id="titulo-respostas">Respostas</h2>
+
+                <div id="estado-respostas" role="status" aria-live="polite" hidden></div>
+
+                <div id="thread"></div>
+            </section>
+        </div>
+    </main>
+</body>
+
+</html>

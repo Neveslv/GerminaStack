@@ -10,7 +10,8 @@ import {
     USAR_DADOS_LOCAIS
 } from './config.js';
 
-import { POSTS_LOCAIS } from './posts-mockados.js';
+import { POSTS_LOCAIS } from './mock/posts.js';
+import { MATERIAS_LOCAIS } from './mock/subjects.js';
 
 /** Erro de rede ou de resposta da API, carregando o status HTTP quando existir. */
 export class ErroDeApi extends Error {
@@ -72,10 +73,24 @@ async function requisitar(caminho, opcoes = {}) {
     }
 }
 
-/** Devolve a lista de publicações do feed. */
-export async function listarPosts() {
-    if (USAR_DADOS_LOCAIS) return POSTS_LOCAIS;
-    return requisitar('/api/posts');
+/**
+ * Devolve a lista de publicações do feed.
+ * @param {{ idSubject?: number }} filtros filtro opcional por matéria
+ */
+export async function listarPosts({ idSubject } = {}) {
+    if (USAR_DADOS_LOCAIS) {
+        if (!idSubject) return POSTS_LOCAIS;
+        return POSTS_LOCAIS.filter((post) => post.subject.id === idSubject);
+    }
+
+    const query = idSubject ? `?id_subject=${idSubject}` : '';
+    return requisitar(`/api/posts${query}`);
+}
+
+/** Devolve a lista de matérias disponíveis para filtro. */
+export async function listarMaterias() {
+    if (USAR_DADOS_LOCAIS) return MATERIAS_LOCAIS;
+    return requisitar('/api/subjects');
 }
 
 /** Devolve uma publicação pelo identificador. */

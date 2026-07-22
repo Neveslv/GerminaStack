@@ -1,0 +1,3 @@
+[submodule "static/vendor/germinastack-ui-components"]
+	path = static/vendor/germinastack-ui-components
+	url = https://github.com/Nicolas25vlad/germinastack-ui-components.git

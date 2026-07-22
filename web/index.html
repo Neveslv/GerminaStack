@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feed | GerminaStack</title>
+    <meta name="description" content="Espaço onde os alunos discutem os conteúdos vistos em sala e tiram dúvidas." />
+    <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
+    <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/main.js"></script>
+</head>
+
+<body>
+    <a class="gs-skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="gs-topbar">
+        <p class="gs-topbar-brand">GerminaStack</p>
+
+        <nav class="gs-topbar-nav" aria-label="Navegação principal">
+            <ul>
+                <li><a href="index.html" aria-current="page">Feed</a></li>
+                <li><a href="publicar.html">Publicar</a></li>
+                <li><a href="login.html">Entrar</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="gs-page" id="conteudo">
+        <h1>Feed da escola</h1>
+        <p>Dúvidas, resumos e discussões sobre o que foi visto em sala.</p>
+
+        <section aria-labelledby="titulo-feed">
+            <h2 id="titulo-feed">Publicações recentes</h2>
+
+            <p class="gs-alert" id="status-feed" role="status" aria-live="polite" hidden></p>
+
+            <ul class="gs-stack" id="feed"></ul>
+        </section>
+    </main>
+
+    <footer class="gs-footer">
+        <p>GerminaStack — projeto da disciplina de Desenvolvimento de Aplicações Dinâmicas.</p>
+    </footer>
+</body>
+
+</html>

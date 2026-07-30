@@ -21,6 +21,7 @@ const (
 	tokenTTL         = 24 * time.Hour
 	migrationTimeout = 15 * time.Second
 	shutdownTimeout  = 10 * time.Second
+	httpWriteMargin  = 3 * time.Second
 )
 
 type systemClock struct{}
@@ -64,17 +65,10 @@ func run() error {
 	credentials := database.NewPostgresCredentialRepository(db)
 	challenges := database.NewPostgresChallengeRepository(db)
 	authService := auth.NewService(credentials, challenges, mailer, []byte(cfg.TwoFactorSecret), systemClock{})
-	authHandler := handlers.NewAuthHandler(authService, cfg.JWTSecret, cfg.CookieSecure, tokenTTL)
+	authHandler := handlers.NewAuthHandler(authService, cfg.JWTSecret, cfg.CookieSecure, tokenTTL, cfg.AuthOperationTimeout)
 	router := routes.NewRouter(authHandler)
 
-	server := &http.Server{
-		Addr:              cfg.HTTPAddr,
-		Handler:           router,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      15 * time.Second,
-		IdleTimeout:       60 * time.Second,
-	}
+	server := newHTTPServer(cfg.HTTPAddr, router, cfg.AuthOperationTimeout)
 	serverErrors := make(chan error, 1)
 	go func() {
 		serverErrors <- server.ListenAndServe()
@@ -93,5 +87,16 @@ func run() error {
 			return errors.New("HTTP server shutdown failed")
 		}
 		return nil
+	}
+}
+
+func newHTTPServer(address string, handler http.Handler, operationTimeout time.Duration) *http.Server {
+	return &http.Server{
+		Addr:              address,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      operationTimeout + httpWriteMargin,
+		IdleTimeout:       60 * time.Second,
 	}
 }

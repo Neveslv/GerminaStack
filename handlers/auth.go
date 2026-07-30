@@ -26,20 +26,22 @@ type AuthService interface {
 }
 
 type AuthHandler struct {
-	service      AuthService
-	jwtSecret    string
-	cookieSecure bool
-	tokenTTL     time.Duration
-	now          func() time.Time
+	service          AuthService
+	jwtSecret        string
+	cookieSecure     bool
+	tokenTTL         time.Duration
+	operationTimeout time.Duration
+	now              func() time.Time
 }
 
-func NewAuthHandler(service AuthService, jwtSecret string, cookieSecure bool, tokenTTL time.Duration) *AuthHandler {
+func NewAuthHandler(service AuthService, jwtSecret string, cookieSecure bool, tokenTTL, operationTimeout time.Duration) *AuthHandler {
 	return &AuthHandler{
-		service:      service,
-		jwtSecret:    jwtSecret,
-		cookieSecure: cookieSecure,
-		tokenTTL:     tokenTTL,
-		now:          time.Now,
+		service:          service,
+		jwtSecret:        jwtSecret,
+		cookieSecure:     cookieSecure,
+		tokenTTL:         tokenTTL,
+		operationTimeout: operationTimeout,
+		now:              time.Now,
 	}
 }
 
@@ -59,7 +61,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	challengeID, err := h.service.StartLogin(c.Request.Context(), request.Username, request.Password)
+	operationContext, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	challengeID, err := h.service.StartLogin(operationContext, request.Username, request.Password)
 	switch {
 	case err == nil:
 		c.JSON(http.StatusAccepted, gin.H{"challenge_id": challengeID})
@@ -85,7 +89,9 @@ func (h *AuthHandler) CompleteLogin(c *gin.Context) {
 		return
 	}
 
-	userID, err := h.service.CompleteLogin(c.Request.Context(), request.ChallengeID, request.Code)
+	operationContext, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	userID, err := h.service.CompleteLogin(operationContext, request.ChallengeID, request.Code)
 	if err != nil {
 		h.writeCompleteLoginError(c, err)
 		return

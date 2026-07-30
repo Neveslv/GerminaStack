@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,7 +24,7 @@ func TestLoginReturnsAcceptedChallenge(t *testing.T) {
 	t.Parallel()
 
 	service := &authServiceFake{startID: "challenge-id"}
-	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour)
+	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"correct-password"}`, "application/json")
 
 	if recorder.Code != http.StatusAccepted {
@@ -46,7 +47,7 @@ func TestLoginReturnsIdenticalUnauthorizedResponseForInvalidCredentials(t *testi
 
 	makeResponse := func() *httptest.ResponseRecorder {
 		service := &authServiceFake{startErr: auth.ErrInvalidCredentials}
-		handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour)
+		handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 		return performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"wrong"}`, "application/json")
 	}
 	first := makeResponse()
@@ -81,7 +82,7 @@ func TestLoginRejectsMalformedAndOversizedInput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			service := &authServiceFake{}
-			handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour)
+			handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 			recorder := performRequest(handler.Login, http.MethodPost, "/api/login", tt.body, tt.contentType)
 			if recorder.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400; body=%s", recorder.Code, recorder.Body.String())
@@ -96,7 +97,7 @@ func TestLoginRejectsMalformedAndOversizedInput(t *testing.T) {
 func TestLoginMapsDependencyFailureToUnavailable(t *testing.T) {
 	t.Parallel()
 
-	handler := NewAuthHandler(&authServiceFake{startErr: auth.ErrUnavailable}, "jwt-test-secret", true, 24*time.Hour)
+	handler := NewAuthHandler(&authServiceFake{startErr: auth.ErrUnavailable}, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503", recorder.Code)
@@ -109,9 +110,9 @@ func TestLoginMapsDependencyFailureToUnavailable(t *testing.T) {
 func TestCompleteLoginSetsJWTInExplicitSecureCookie(t *testing.T) {
 	t.Parallel()
 
-	now := time.Date(2026, 7, 30, 14, 30, 0, 0, time.UTC)
+	now := time.Now().UTC().Truncate(time.Second)
 	service := &authServiceFake{completeUserID: 42}
-	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour)
+	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 	handler.now = func() time.Time { return now }
 	recorder := performRequest(handler.CompleteLogin, http.MethodPost, "/api/login/2fa", `{"challenge_id":"challenge-id","code":"123456"}`, "application/json")
 
@@ -164,7 +165,7 @@ func TestCompleteLoginMapsEveryState(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			handler := NewAuthHandler(&authServiceFake{completeErr: tt.err}, "jwt-test-secret", false, 24*time.Hour)
+			handler := NewAuthHandler(&authServiceFake{completeErr: tt.err}, "jwt-test-secret", false, 24*time.Hour, 2*time.Second)
 			recorder := performRequest(handler.CompleteLogin, http.MethodPost, "/api/login/2fa", `{"challenge_id":"challenge-id","code":"123456"}`, "application/json")
 			if recorder.Code != tt.status {
 				t.Fatalf("status = %d, want %d; body=%s", recorder.Code, tt.status, recorder.Body.String())
@@ -184,7 +185,7 @@ func TestCompleteLoginRejectsMalformedInputBeforeService(t *testing.T) {
 	}
 	for _, body := range tests {
 		service := &authServiceFake{}
-		handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour)
+		handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 		recorder := performRequest(handler.CompleteLogin, http.MethodPost, "/api/login/2fa", body, "application/json")
 		if recorder.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d, want 400; body=%s", recorder.Code, recorder.Body.String())
@@ -195,10 +196,109 @@ func TestCompleteLoginRejectsMalformedInputBeforeService(t *testing.T) {
 	}
 }
 
+func TestLoginPassesExplicitDeadlineToService(t *testing.T) {
+	t.Parallel()
+
+	const operationTimeout = 250 * time.Millisecond
+	var receivedDeadline time.Time
+	service := &authServiceFake{
+		startFunc: func(ctx context.Context, _, _ string) (string, error) {
+			var ok bool
+			receivedDeadline, ok = ctx.Deadline()
+			if !ok {
+				return "", errors.New("missing context deadline")
+			}
+			return "challenge-id", nil
+		},
+	}
+	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, operationTimeout)
+	startedAt := time.Now()
+	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+
+	if recorder.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want 202; body=%s", recorder.Code, recorder.Body.String())
+	}
+	minimum := startedAt.Add(operationTimeout - 100*time.Millisecond)
+	maximum := startedAt.Add(operationTimeout + 100*time.Millisecond)
+	if receivedDeadline.Before(minimum) || receivedDeadline.After(maximum) {
+		t.Fatalf("service deadline = %v, want between %v and %v", receivedDeadline, minimum, maximum)
+	}
+}
+
+func TestCompleteLoginPassesExplicitDeadlineToService(t *testing.T) {
+	t.Parallel()
+
+	const operationTimeout = 250 * time.Millisecond
+	var hasDeadline bool
+	service := &authServiceFake{
+		completeFunc: func(ctx context.Context, _, _ string) (int64, error) {
+			_, hasDeadline = ctx.Deadline()
+			return 42, nil
+		},
+	}
+	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, operationTimeout)
+	recorder := performRequest(handler.CompleteLogin, http.MethodPost, "/api/login/2fa", `{"challenge_id":"challenge-id","code":"123456"}`, "application/json")
+
+	if recorder.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204; body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !hasDeadline {
+		t.Fatal("service context has no deadline")
+	}
+}
+
+func TestLoginTimeoutReturnsSafeUnavailableResponse(t *testing.T) {
+	t.Parallel()
+
+	service := &authServiceFake{
+		startFunc: func(ctx context.Context, _, _ string) (string, error) {
+			<-ctx.Done()
+			return "", ctx.Err()
+		},
+	}
+	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 10*time.Millisecond)
+	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Body.String() != `{"error":"serviço temporariamente indisponível"}` {
+		t.Fatalf("body = %q, want generic unavailable response", recorder.Body.String())
+	}
+}
+
+func TestLoginPreservesClientCancellation(t *testing.T) {
+	t.Parallel()
+
+	var receivedErr error
+	service := &authServiceFake{
+		startFunc: func(ctx context.Context, _, _ string) (string, error) {
+			receivedErr = ctx.Err()
+			return "", ctx.Err()
+		},
+	}
+	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, time.Second)
+
+	requestContext, cancel := context.WithCancel(context.Background())
+	cancel()
+	recorder := performRequestWithContext(handler.Login, requestContext, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+
+	if !errors.Is(receivedErr, context.Canceled) {
+		t.Fatalf("service context error = %v, want context canceled", receivedErr)
+	}
+	if recorder.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
 func performRequest(handler gin.HandlerFunc, method, path, body, contentType string) *httptest.ResponseRecorder {
+	return performRequestWithContext(handler, context.Background(), method, path, body, contentType)
+}
+
+func performRequestWithContext(handler gin.HandlerFunc, requestContext context.Context, method, path, body, contentType string) *httptest.ResponseRecorder {
 	recorder := httptest.NewRecorder()
 	context, _ := gin.CreateTestContext(recorder)
-	request := httptest.NewRequest(method, path, bytes.NewBufferString(body))
+	request := httptest.NewRequest(method, path, bytes.NewBufferString(body)).WithContext(requestContext)
 	request.Header.Set("Content-Type", contentType)
 	context.Request = request
 	handler(context)
@@ -216,18 +316,26 @@ type authServiceFake struct {
 	completeCalls  int
 	completeID     string
 	completeCode   string
+	startFunc      func(context.Context, string, string) (string, error)
+	completeFunc   func(context.Context, string, string) (int64, error)
 }
 
-func (f *authServiceFake) StartLogin(_ context.Context, username, password string) (string, error) {
+func (f *authServiceFake) StartLogin(ctx context.Context, username, password string) (string, error) {
 	f.startCalls++
 	f.startUsername = username
 	f.startPassword = password
+	if f.startFunc != nil {
+		return f.startFunc(ctx, username, password)
+	}
 	return f.startID, f.startErr
 }
 
-func (f *authServiceFake) CompleteLogin(_ context.Context, challengeID, code string) (int64, error) {
+func (f *authServiceFake) CompleteLogin(ctx context.Context, challengeID, code string) (int64, error) {
 	f.completeCalls++
 	f.completeID = challengeID
 	f.completeCode = code
+	if f.completeFunc != nil {
+		return f.completeFunc(ctx, challengeID, code)
+	}
 	return f.completeUserID, f.completeErr
 }

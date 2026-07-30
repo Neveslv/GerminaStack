@@ -84,7 +84,7 @@ WHERE id = $1 AND used_at IS NULL`
 }
 
 func (r *PostgresChallengeRepository) VerifyAndConsume(ctx context.Context, challengeID string, presentedHash []byte, now time.Time) (int64, error) {
-	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return 0, fmt.Errorf("begin challenge verification: %w", err)
 	}

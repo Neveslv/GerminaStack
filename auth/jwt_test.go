@@ -8,7 +8,7 @@ import (
 func TestGenerateTokenWithTimesIncludesRequiredClaims(t *testing.T) {
 	t.Parallel()
 
-	issuedAt := time.Date(2026, 7, 30, 14, 0, 0, 0, time.UTC)
+	issuedAt := time.Now().UTC().Truncate(time.Second)
 	expiresAt := issuedAt.Add(24 * time.Hour)
 	token, err := GenerateTokenWithTimes("42", false, "jwt-test-secret", issuedAt, expiresAt)
 	if err != nil {
@@ -32,7 +32,7 @@ func TestGenerateTokenWithTimesIncludesRequiredClaims(t *testing.T) {
 func TestGenerateTokenWithTimesRejectsMissingSecretAndInvalidWindow(t *testing.T) {
 	t.Parallel()
 
-	now := time.Date(2026, 7, 30, 14, 0, 0, 0, time.UTC)
+	now := time.Now().UTC().Truncate(time.Second)
 	if _, err := GenerateTokenWithTimes("42", false, "", now, now.Add(time.Hour)); err == nil {
 		t.Fatal("GenerateTokenWithTimes() error = nil, want missing secret")
 	}

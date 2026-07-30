@@ -2,8 +2,15 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"database/sql/driver"
 	"errors"
+	"fmt"
+	"io"
 	"regexp"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -268,3 +275,170 @@ func challengeRow(id string, userID int64, hash []byte, expiresAt time.Time, att
 	return sqlmock.NewRows([]string{"id", "user_id", "code_hash", "expires_at", "attempts", "max_attempts", "used_at", "created_at"}).
 		AddRow(id, userID, hash, expiresAt, attempts, maxAttempts, usedAt, createdAt)
 }
+
+func TestPostgresChallengeRepositoryCreatePreservesSerializableIsolation(t *testing.T) {
+	t.Parallel()
+
+	state, db := openTransactionCaptureDB(t)
+	now := time.Now().UTC()
+	repo := NewPostgresChallengeRepository(db)
+	err := repo.Create(context.Background(), Challenge{
+		ID:          "challenge-id",
+		UserID:      42,
+		CodeHash:    []byte{1, 2, 3},
+		ExpiresAt:   now.Add(10 * time.Minute),
+		MaxAttempts: 5,
+		CreatedAt:   now,
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+
+	options, _ := state.snapshot()
+	if options.Isolation != driver.IsolationLevel(sql.LevelSerializable) {
+		t.Fatalf("transaction isolation = %d, want Serializable (%d)", options.Isolation, sql.LevelSerializable)
+	}
+}
+
+func TestPostgresChallengeRepositoryVerifyUsesReadCommittedAndRowLock(t *testing.T) {
+	t.Parallel()
+
+	state, db := openTransactionCaptureDB(t)
+	now := time.Now().UTC()
+	state.challenge = Challenge{
+		ID:          "challenge-id",
+		UserID:      42,
+		CodeHash:    []byte{1, 2, 3},
+		ExpiresAt:   now.Add(time.Minute),
+		MaxAttempts: 5,
+		CreatedAt:   now,
+	}
+	repo := NewPostgresChallengeRepository(db)
+	if _, err := repo.VerifyAndConsume(context.Background(), "challenge-id", []byte{1, 2, 3}, now); err != nil {
+		t.Fatalf("VerifyAndConsume() error = %v", err)
+	}
+
+	options, query := state.snapshot()
+	if options.Isolation != driver.IsolationLevel(sql.LevelReadCommitted) {
+		t.Fatalf("transaction isolation = %d, want Read Committed (%d)", options.Isolation, sql.LevelReadCommitted)
+	}
+	if !strings.Contains(query, "FOR UPDATE") {
+		t.Fatalf("verification query does not lock the row: %q", query)
+	}
+}
+
+var transactionCaptureSequence atomic.Uint64
+
+type transactionCaptureState struct {
+	mu        sync.Mutex
+	options   driver.TxOptions
+	query     string
+	challenge Challenge
+}
+
+func (s *transactionCaptureState) snapshot() (driver.TxOptions, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.options, s.query
+}
+
+type transactionCaptureDriver struct {
+	state *transactionCaptureState
+}
+
+func (d transactionCaptureDriver) Open(string) (driver.Conn, error) {
+	return &transactionCaptureConn{state: d.state}, nil
+}
+
+type transactionCaptureConn struct {
+	state *transactionCaptureState
+}
+
+func (c *transactionCaptureConn) Prepare(string) (driver.Stmt, error) {
+	return nil, errors.New("prepared statements are not supported by the capture driver")
+}
+
+func (c *transactionCaptureConn) Close() error {
+	return nil
+}
+
+func (c *transactionCaptureConn) Begin() (driver.Tx, error) {
+	return nil, errors.New("Begin without context is not supported by the capture driver")
+}
+
+func (c *transactionCaptureConn) BeginTx(_ context.Context, options driver.TxOptions) (driver.Tx, error) {
+	c.state.mu.Lock()
+	c.state.options = options
+	c.state.mu.Unlock()
+	return transactionCaptureTx{}, nil
+}
+
+func (c *transactionCaptureConn) ExecContext(_ context.Context, _ string, _ []driver.NamedValue) (driver.Result, error) {
+	return driver.RowsAffected(1), nil
+}
+
+func (c *transactionCaptureConn) QueryContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Rows, error) {
+	c.state.mu.Lock()
+	c.state.query = query
+	challenge := c.state.challenge
+	c.state.mu.Unlock()
+	return &challengeCaptureRows{challenge: challenge}, nil
+}
+
+type transactionCaptureTx struct{}
+
+func (transactionCaptureTx) Commit() error {
+	return nil
+}
+
+func (transactionCaptureTx) Rollback() error {
+	return nil
+}
+
+type challengeCaptureRows struct {
+	challenge Challenge
+	read      bool
+}
+
+func (r *challengeCaptureRows) Columns() []string {
+	return []string{"id", "user_id", "code_hash", "expires_at", "attempts", "max_attempts", "used_at", "created_at"}
+}
+
+func (r *challengeCaptureRows) Close() error {
+	return nil
+}
+
+func (r *challengeCaptureRows) Next(values []driver.Value) error {
+	if r.read {
+		return io.EOF
+	}
+	r.read = true
+	values[0] = r.challenge.ID
+	values[1] = r.challenge.UserID
+	values[2] = r.challenge.CodeHash
+	values[3] = r.challenge.ExpiresAt
+	values[4] = int64(r.challenge.Attempts)
+	values[5] = int64(r.challenge.MaxAttempts)
+	values[6] = nil
+	values[7] = r.challenge.CreatedAt
+	return nil
+}
+
+func openTransactionCaptureDB(t *testing.T) (*transactionCaptureState, *sql.DB) {
+	t.Helper()
+	state := &transactionCaptureState{}
+	driverName := fmt.Sprintf("challenge-transaction-capture-%d", transactionCaptureSequence.Add(1))
+	sql.Register(driverName, transactionCaptureDriver{state: state})
+	db, err := sql.Open(driverName, "")
+	if err != nil {
+		t.Fatalf("sql.Open(): %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	return state, db
+}
+
+var (
+	_ driver.ConnBeginTx    = (*transactionCaptureConn)(nil)
+	_ driver.ExecerContext  = (*transactionCaptureConn)(nil)
+	_ driver.QueryerContext = (*transactionCaptureConn)(nil)
+)

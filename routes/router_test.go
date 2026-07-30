@@ -12,7 +12,7 @@ import (
 func TestNewRouterRegistersTwoStepLoginRoutes(t *testing.T) {
 	t.Parallel()
 
-	handler := handlers.NewAuthHandler(routerAuthServiceFake{}, "jwt-test-secret", true, 24*time.Hour)
+	handler := handlers.NewAuthHandler(routerAuthServiceFake{}, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 	router := NewRouter(handler)
 
 	got := make(map[string]bool)

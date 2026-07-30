@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"errors"
 	"fmt"
 	"os"
@@ -12,12 +14,13 @@ import (
 )
 
 type Config struct {
-	DatabaseURL     string
-	JWTSecret       string
-	TwoFactorSecret string
-	CookieSecure    bool
-	HTTPAddr        string
-	SMTP            auth.SMTPConfig
+	DatabaseURL          string
+	JWTSecret            string
+	TwoFactorSecret      string
+	CookieSecure         bool
+	HTTPAddr             string
+	AuthOperationTimeout time.Duration
+	SMTP                 auth.SMTPConfig
 }
 
 func Load() (Config, error) {
@@ -31,6 +34,9 @@ func Load() (Config, error) {
 	}
 	twoFactorSecret, err := required("TWO_FACTOR_SECRET")
 	if err != nil {
+		return Config{}, err
+	}
+	if err := validateAuthenticationSecrets(jwtSecret, twoFactorSecret); err != nil {
 		return Config{}, err
 	}
 	smtpHost, err := required("SMTP_HOST")
@@ -74,6 +80,14 @@ func Load() (Config, error) {
 	if httpAddr == "" {
 		httpAddr = ":8080"
 	}
+	authOperationTimeout := 15 * time.Second
+	if value := strings.TrimSpace(os.Getenv("AUTH_OPERATION_TIMEOUT")); value != "" {
+		parsed, err := time.ParseDuration(value)
+		if err != nil || parsed <= 0 {
+			return Config{}, errors.New("AUTH_OPERATION_TIMEOUT is invalid")
+		}
+		authOperationTimeout = parsed
+	}
 
 	smtpConfig := auth.SMTPConfig{
 		Host:        smtpHost,
@@ -89,13 +103,29 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		DatabaseURL:     databaseURL,
-		JWTSecret:       jwtSecret,
-		TwoFactorSecret: twoFactorSecret,
-		CookieSecure:    cookieSecure,
-		HTTPAddr:        httpAddr,
-		SMTP:            smtpConfig,
+		DatabaseURL:          databaseURL,
+		JWTSecret:            jwtSecret,
+		TwoFactorSecret:      twoFactorSecret,
+		CookieSecure:         cookieSecure,
+		HTTPAddr:             httpAddr,
+		AuthOperationTimeout: authOperationTimeout,
+		SMTP:                 smtpConfig,
 	}, nil
+}
+
+func validateAuthenticationSecrets(jwtSecret, twoFactorSecret string) error {
+	if len([]byte(jwtSecret)) < 32 {
+		return errors.New("JWT_SECRET must contain at least 32 bytes")
+	}
+	if len([]byte(twoFactorSecret)) < 32 {
+		return errors.New("TWO_FACTOR_SECRET must contain at least 32 bytes")
+	}
+	jwtDigest := sha256.Sum256([]byte(jwtSecret))
+	twoFactorDigest := sha256.Sum256([]byte(twoFactorSecret))
+	if subtle.ConstantTimeCompare(jwtDigest[:], twoFactorDigest[:]) == 1 {
+		return errors.New("JWT_SECRET and TWO_FACTOR_SECRET must be different")
+	}
+	return nil
 }
 
 func required(name string) (string, error) {

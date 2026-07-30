@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matérias | GerminaStack</title>
+    <meta name="description" content="Canais de duvidas por materia, com as publicacoes de cada disciplina." />
+
+    <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
+    <link rel="stylesheet" href="/static/css/temas.css" />
+
+    <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
+    <script src="/static/js/tema-inicial.js"></script>
+
+    <script src="/static/vendor/germinastack/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/componentes/cabecalho.js"></script>
+    <script type="module" src="/static/js/pages/materias.js"></script>
+</head>
+
+<body>
+    <a class="gs-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+    <header class="gs-topbar">
+        <a class="gs-brand" href="/">
+            <span class="gs-brand-mark" aria-hidden="true">GS</span>
+            <span>GerminaStack</span>
+        </a>
+
+        <nav class="gs-nav" aria-label="Navegação principal">
+            <a class="gs-nav-link" href="/">Feed</a>
+            <a class="gs-nav-link is-active" href="/materias" aria-current="page">Matérias</a>
+            <a class="gs-nav-link" href="/publicar">Publicar</a>
+            <a class="gs-nav-link" href="/notificacoes">
+                Notificações
+                <span class="gs-badge" data-nao-lidas hidden></span>
+            </a>
+            <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
+            <a class="gs-nav-link" href="/perfil">Perfil</a>
+        </nav>
+    </header>
+
+    <main class="gs-page" id="conteudo-principal">
+        <div class="gs-section-head">
+            <h1>Canais de dúvidas</h1>
+            <p>Cada matéria tem seu canal. Escolha um para ver só o que a turma publicou ali.</p>
+        </div>
+
+        <div class="gs-layout-demo">
+            <div class="gs-stack">
+                <section aria-labelledby="titulo-canais">
+                    <h2 class="gs-side-title" id="titulo-canais">Matérias</h2>
+
+                    <div id="estado-materias" role="status" aria-live="polite" hidden></div>
+
+                    <div class="gs-metric-grid" id="grade-materias"></div>
+                </section>
+
+                <section class="gs-stack" aria-labelledby="titulo-publicacoes">
+                    <h2 class="gs-side-title" id="titulo-publicacoes">Publicações da matéria</h2>
+
+                    <div id="estado-publicacoes" role="status" aria-live="polite" hidden></div>
+
+                    <div class="gs-stack" id="publicacoes-da-materia"></div>
+                </section>
+            </div>
+
+            <aside class="gs-stack" aria-labelledby="titulo-resumo">
+                <section class="gs-side-card">
+                    <h2 class="gs-side-title" id="titulo-resumo">Resumo</h2>
+                    <div class="gs-side-list" id="resumo-materias"></div>
+                </section>
+
+                <section class="gs-callout is-info">
+                    <strong>Não achou sua matéria?</strong>
+                    <p>As matérias são cadastradas por turma. Fale com quem cuida da coordenação do Germinare.</p>
+                </section>
+            </aside>
+        </div>
+    </main>
+</body>
+
+</html>

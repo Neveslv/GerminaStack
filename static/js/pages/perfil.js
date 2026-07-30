@@ -1,0 +1,168 @@
+/**
+ * Página de perfil.
+ *
+ * Sem `?usuario=` na URL, mostra o perfil de quem está logado.
+ * Com `?usuario=fulano`, mostra o perfil público daquela pessoa — é para lá
+ * que apontam os links de autor no feed e nos comentários.
+ */
+
+import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao } from '../api.js';
+import { USUARIO_ATUAL } from '../mock/sessao.js';
+import { criarCartaoDePost } from '../componentes/cartao-post.js';
+import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
+import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
+import { formatarDataCompleta } from '../utils/data.js';
+
+const cartao = document.querySelector('#cartao-perfil');
+const numeros = document.querySelector('#numeros-do-perfil');
+const publicacoes = document.querySelector('#publicacoes-do-usuario');
+const estadoPerfil = criarPainelDeEstado(document.querySelector('#estado-perfil'));
+const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
+
+const usuarioDaUrl = new URLSearchParams(window.location.search).get('usuario');
+const ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === USUARIO_ATUAL.username;
+
+function montarCartao(usuario) {
+    cartao.replaceChildren();
+
+    const avatar = criarElemento('span', {
+        classe: 'gs-avatar',
+        texto: inicialDoNome(usuario.name),
+        atributos: { 'aria-hidden': 'true' }
+    });
+    avatar.style.background = corDoAutor(usuario.id);
+
+    const identificacao = criarElemento('div', { classe: 'gs-stack' });
+    identificacao.append(
+        criarElemento('h1', {
+            classe: 'gs-card-title',
+            texto: usuario.name,
+            atributos: { id: 'nome-do-usuario' }
+        }),
+        criarElemento('p', { classe: 'gs-card-subtitle', texto: `@${usuario.username}` })
+    );
+
+    const chips = criarElemento('div', { classe: 'gs-cluster' });
+
+    const turma = criarElemento('span', { classe: 'gs-chip is-blue' });
+    turma.append(
+        criarElemento('span', { classe: 'gs-chip-dot', atributos: { 'aria-hidden': 'true' } }),
+        criarElemento('span', { texto: usuario.year?.year ?? 'Turma não informada' })
+    );
+    chips.append(turma);
+
+    if (ehMeuPerfil) chips.append(criarElemento('span', { classe: 'gs-badge', texto: 'Você' }));
+
+    identificacao.append(chips);
+
+    // O e-mail é dado pessoal: só aparece no próprio perfil, nunca no de outra
+    // pessoa, mesmo que a API mande o campo.
+    if (ehMeuPerfil) {
+        identificacao.append(
+            criarElemento('p', { classe: 'gs-form-hint', texto: usuario.email })
+        );
+    }
+
+    if (usuario.created_at) {
+        identificacao.append(
+            criarElemento('p', {
+                classe: 'gs-form-hint',
+                texto: `Na plataforma desde ${formatarDataCompleta(usuario.created_at)}`
+            })
+        );
+    }
+
+    const cabecalho = criarElemento('div', { classe: 'gs-post-head' });
+    cabecalho.append(avatar, identificacao);
+    cartao.append(cabecalho);
+
+    if (ehMeuPerfil) {
+        const acoes = criarElemento('div', { classe: 'gs-cluster' });
+        acoes.append(
+            criarElemento('a', {
+                classe: 'gs-btn gs-btn-secondary',
+                texto: 'Ajustar acessibilidade',
+                atributos: { href: '/preferencias' }
+            }),
+            criarElemento('a', {
+                classe: 'gs-btn gs-btn-primary',
+                texto: 'Nova publicação',
+                atributos: { href: '/publicar' }
+            })
+        );
+        cartao.append(acoes);
+    }
+}
+
+function montarNumeros(posts) {
+    numeros.replaceChildren();
+
+    const totalCurtidas = posts.reduce((soma, post) => soma + post.likes, 0);
+    const totalRespostas = posts.reduce((soma, post) => soma + (post.comments_count ?? 0), 0);
+    const materias = new Set(posts.map((post) => post.subject.id)).size;
+
+    const cartoes = [
+        { rotulo: 'Publicações', valor: posts.length },
+        { rotulo: 'Curtidas recebidas', valor: totalCurtidas },
+        { rotulo: 'Respostas recebidas', valor: totalRespostas },
+        { rotulo: 'Matérias em que publicou', valor: materias }
+    ];
+
+    const fragmento = document.createDocumentFragment();
+
+    cartoes.forEach(({ rotulo, valor }) => {
+        const item = criarElemento('article', { classe: 'gs-metric-card gs-stack' });
+        item.append(
+            criarElemento('span', { classe: 'gs-metric-label', texto: rotulo }),
+            criarElemento('strong', { texto: String(valor) })
+        );
+        fragmento.append(item);
+    });
+
+    numeros.append(fragmento);
+}
+
+async function montarPublicacoes(usuario, posts) {
+    publicacoes.replaceChildren();
+
+    if (posts.length === 0) {
+        estadoPublicacoes.vazio(
+            ehMeuPerfil ? 'Você ainda não publicou' : `${usuario.name} ainda não publicou`,
+            ehMeuPerfil ? 'Sua primeira dúvida pode ajudar mais gente do que você imagina.' : ''
+        );
+        return;
+    }
+
+    const reacoes = await Promise.all(posts.map((post) => buscarMinhaReacao('post', post.id)));
+
+    const fragmento = document.createDocumentFragment();
+    posts.forEach((post, indice) => {
+        fragmento.append(criarCartaoDePost(post, { minhaReacao: reacoes[indice] }));
+    });
+    publicacoes.append(fragmento);
+
+    estadoPublicacoes.ocultar();
+    inicializarKit(publicacoes);
+}
+
+async function carregarPagina() {
+    estadoPerfil.carregando('Carregando perfil…');
+    estadoPublicacoes.carregando('Carregando publicações…');
+
+    try {
+        const usuario = await buscarUsuario(usuarioDaUrl ?? USUARIO_ATUAL.username);
+
+        document.title = `${usuario.name} | GerminaStack`;
+        montarCartao(usuario);
+        estadoPerfil.ocultar();
+
+        const posts = await listarPostsDoAutor(usuario.id);
+        montarNumeros(posts);
+        await montarPublicacoes(usuario, posts);
+    } catch (erro) {
+        estadoPerfil.erro(erro.message, 'Confira o endereço ou volte ao feed.');
+        estadoPublicacoes.ocultar();
+    }
+}
+
+carregarPagina();

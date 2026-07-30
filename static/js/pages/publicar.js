@@ -5,6 +5,8 @@ import { criarElemento, criarPainelDeEstado } from '../utils/dom.js';
 
 const formulario = document.querySelector('#form-publicar');
 const seletorMateria = document.querySelector('#materia');
+const campoImagem = document.querySelector('#imagem');
+const erroImagem = document.querySelector('#erro-imagem');
 const estado = criarPainelDeEstado(document.querySelector('#estado-formulario'));
 
 const REGRAS = [
@@ -18,6 +20,9 @@ function limparErros() {
         document.querySelector(`#${erro}`).textContent = '';
         document.querySelector(`#${campo}`).setAttribute('aria-invalid', 'false');
     });
+
+    erroImagem.textContent = '';
+    campoImagem.setAttribute('aria-invalid', 'false');
 }
 
 /** Valida os campos e devolve o primeiro elemento inválido, ou null. */
@@ -32,6 +37,14 @@ function validar() {
         elemento.setAttribute('aria-invalid', 'true');
         if (!primeiroInvalido) primeiroInvalido = elemento;
     });
+
+    // A coluna image_url aceita nulo, então o campo só é validado se foi preenchido.
+    const imagem = campoImagem.value.trim();
+    if (imagem && !/^https?:\/\/.+/i.test(imagem)) {
+        erroImagem.textContent = 'O endereço precisa começar com http:// ou https://.';
+        campoImagem.setAttribute('aria-invalid', 'true');
+        if (!primeiroInvalido) primeiroInvalido = campoImagem;
+    }
 
     return primeiroInvalido;
 }
@@ -69,10 +82,13 @@ formulario.addEventListener('submit', async (evento) => {
     estado.carregando('Publicando…');
 
     try {
+        const imagem = campoImagem.value.trim();
+
         const post = await criarPost({
             id_subject: Number(seletorMateria.value),
             title: document.querySelector('#titulo').value.trim(),
-            content: document.querySelector('#conteudo-post').value.trim()
+            content: document.querySelector('#conteudo-post').value.trim(),
+            image_url: imagem || null
         });
 
         window.GerminaStackUI?.showToast({

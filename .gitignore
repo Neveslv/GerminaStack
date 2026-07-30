@@ -11,6 +11,11 @@ go.work.sum
 .env
 .env.*
 
+# Node (dependencia de front-end: germinastack-ui-components)
+# static/vendor/germinastack/ e o resultado sincronizado do pacote e FICA versionado,
+# para "go run"/deploy nunca precisarem de Node instalado.
+node_modules/
+
 # Editor and OS files
 .vscode/
 .idea/

@@ -1,8 +1,8 @@
 /** Pagina de feed: lista publicacoes, filtra por materia e por busca. */
 
-import { listarPosts, listarMaterias } from '../api.js';
+import { listarPosts, listarMaterias, buscarMinhaReacao } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
-import { criarElemento, comAtraso, criarPainelDeEstado } from '../utils/dom.js';
+import { criarElemento, comAtraso, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
 
 const feed = document.querySelector('#feed');
 const listaMaterias = document.querySelector('#lista-materias');
@@ -22,7 +22,7 @@ function aplicarBusca(posts) {
     );
 }
 
-function renderizarFeed() {
+async function renderizarFeed() {
     const visiveis = aplicarBusca(postsCarregados);
 
     feed.replaceChildren();
@@ -35,12 +35,20 @@ function renderizarFeed() {
         return;
     }
 
+    // Em paralelo: uma consulta por post em série deixaria o feed abrindo
+    // aos poucos, e o kit anuncia o total só depois que tudo entra na tela.
+    const reacoes = await Promise.all(
+        visiveis.map((post) => buscarMinhaReacao('post', post.id))
+    );
+
     const fragmento = document.createDocumentFragment();
-    visiveis.forEach((post) => fragmento.append(criarCartaoDePost(post)));
+    visiveis.forEach((post, indice) => {
+        fragmento.append(criarCartaoDePost(post, { minhaReacao: reacoes[indice] }));
+    });
     feed.append(fragmento);
 
     estado.ocultar();
-    window.GerminaStackUI?.init(feed);
+    inicializarKit(feed);
     window.GerminaStackUI?.announceToScreenReader(`${visiveis.length} publicações listadas.`);
 }
 
@@ -49,7 +57,7 @@ async function carregarPosts() {
 
     try {
         postsCarregados = await listarPosts({ idSubject: filtros.idSubject });
-        renderizarFeed();
+        await renderizarFeed();
     } catch (erro) {
         feed.replaceChildren();
         estado.erro(erro.message, 'Recarregue a página para tentar de novo.');
@@ -68,7 +76,11 @@ function marcarMateriaAtiva() {
 function criarLinhaDeMateria(rotulo, id, total) {
     const botao = criarElemento('button', {
         classe: 'gs-side-row',
-        atributos: { type: 'button', 'aria-pressed': 'false' }
+        atributos: {
+            type: 'button',
+            'aria-pressed': 'false',
+            'aria-label': `Filtrar por ${rotulo}, ${total} ${total === 1 ? 'publicação' : 'publicações'}`
+        }
     });
 
     if (id !== null) botao.dataset.id = String(id);
@@ -79,10 +91,6 @@ function criarLinhaDeMateria(rotulo, id, total) {
     );
 
     return botao;
-}
-
-function contarPorMateria(idMateria) {
-    return postsCarregados.filter((post) => post.subject.id === idMateria).length;
 }
 
 function preencherEstatisticas(posts, materias) {

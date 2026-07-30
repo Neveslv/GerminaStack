@@ -7,8 +7,15 @@
     <title>Feed | GerminaStack</title>
     <meta name="description"
         content="Onde a turma do Germinare discute os conteudos vistos em sala, tira duvidas e compartilha material." />
-    <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
-    <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
+
+    <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
+    <link rel="stylesheet" href="/static/css/temas.css" />
+
+    <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
+    <script src="/static/js/tema-inicial.js"></script>
+
+    <script src="/static/vendor/germinastack/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/componentes/cabecalho.js"></script>
     <script type="module" src="/static/js/pages/feed.js"></script>
 </head>
 
@@ -17,14 +24,20 @@
 
     <header class="gs-topbar">
         <a class="gs-brand" href="/">
-            <span class="gs-brand-mark">GS</span>
+            <span class="gs-brand-mark" aria-hidden="true">GS</span>
             <span>GerminaStack</span>
         </a>
 
         <nav class="gs-nav" aria-label="Navegação principal">
             <a class="gs-nav-link is-active" href="/" aria-current="page">Feed</a>
+            <a class="gs-nav-link" href="/materias">Matérias</a>
             <a class="gs-nav-link" href="/publicar">Publicar</a>
-            <a class="gs-nav-link" href="/login">Entrar</a>
+            <a class="gs-nav-link" href="/notificacoes">
+                Notificações
+                <span class="gs-badge" data-nao-lidas hidden></span>
+            </a>
+            <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
+            <a class="gs-nav-link" href="/perfil">Perfil</a>
         </nav>
     </header>
 
@@ -80,6 +93,14 @@
                     <strong>Dica</strong>
                     <p>Use <span class="gs-doc-inline-code">@usuario</span> em uma publicação ou resposta para marcar um
                         colega.</p>
+                </section>
+
+                <section class="gs-callout is-success">
+                    <strong>Enxerga melhor de outro jeito?</strong>
+                    <p>
+                        Dá para trocar o contraste e a fonte de toda a plataforma em
+                        <a href="/preferencias">Acessibilidade</a>.
+                    </p>
                 </section>
             </aside>
         </div>

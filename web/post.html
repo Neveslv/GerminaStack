@@ -6,8 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Publicação | GerminaStack</title>
     <meta name="description" content="Discussao completa da publicacao, com as respostas da turma." />
-    <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
-    <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
+
+    <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
+    <link rel="stylesheet" href="/static/css/temas.css" />
+
+    <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
+    <script src="/static/js/tema-inicial.js"></script>
+
+    <script src="/static/vendor/germinastack/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/componentes/cabecalho.js"></script>
     <script type="module" src="/static/js/pages/post.js"></script>
 </head>
 
@@ -16,14 +23,20 @@
 
     <header class="gs-topbar">
         <a class="gs-brand" href="/">
-            <span class="gs-brand-mark">GS</span>
+            <span class="gs-brand-mark" aria-hidden="true">GS</span>
             <span>GerminaStack</span>
         </a>
 
         <nav class="gs-nav" aria-label="Navegação principal">
             <a class="gs-nav-link" href="/">Feed</a>
+            <a class="gs-nav-link" href="/materias">Matérias</a>
             <a class="gs-nav-link" href="/publicar">Publicar</a>
-            <a class="gs-nav-link" href="/login">Entrar</a>
+            <a class="gs-nav-link" href="/notificacoes">
+                Notificações
+                <span class="gs-badge" data-nao-lidas hidden></span>
+            </a>
+            <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
+            <a class="gs-nav-link" href="/perfil">Perfil</a>
         </nav>
     </header>
 
@@ -37,6 +50,24 @@
 
             <section class="gs-stack" aria-labelledby="titulo-respostas">
                 <h2 class="gs-side-title" id="titulo-respostas">Respostas</h2>
+
+                <div class="gs-card">
+                    <form class="gs-stack" id="form-resposta" novalidate>
+                        <label class="gs-form-group" for="nova-resposta">
+                            <span class="gs-label">Responder esta publicação</span>
+                            <textarea class="gs-textarea" id="nova-resposta" name="resposta" rows="3" required
+                                maxlength="500" aria-describedby="dica-resposta erro-resposta"></textarea>
+                            <span class="gs-form-hint" id="dica-resposta">
+                                Até 500 caracteres. Use @usuario para chamar alguém — a pessoa recebe uma notificação.
+                            </span>
+                            <span class="gs-form-error" id="erro-resposta" role="alert"></span>
+                        </label>
+
+                        <div class="gs-compose-foot">
+                            <button class="gs-btn gs-btn-primary" type="submit">Responder</button>
+                        </div>
+                    </form>
+                </div>
 
                 <div id="estado-respostas" role="status" aria-live="polite" hidden></div>
 

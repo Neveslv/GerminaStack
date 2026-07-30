@@ -6,8 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Nova publicação | GerminaStack</title>
     <meta name="description" content="Publique uma duvida, um resumo ou um material para a turma." />
-    <link rel="stylesheet" href="/static/vendor/germinastack-ui-components/assets/css/germinastack.css" />
-    <script src="/static/vendor/germinastack-ui-components/assets/js/germinastack.js" defer></script>
+
+    <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
+    <link rel="stylesheet" href="/static/css/temas.css" />
+
+    <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
+    <script src="/static/js/tema-inicial.js"></script>
+
+    <script src="/static/vendor/germinastack/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/componentes/cabecalho.js"></script>
     <script type="module" src="/static/js/pages/publicar.js"></script>
 </head>
 
@@ -16,14 +23,20 @@
 
     <header class="gs-topbar">
         <a class="gs-brand" href="/">
-            <span class="gs-brand-mark">GS</span>
+            <span class="gs-brand-mark" aria-hidden="true">GS</span>
             <span>GerminaStack</span>
         </a>
 
         <nav class="gs-nav" aria-label="Navegação principal">
             <a class="gs-nav-link" href="/">Feed</a>
+            <a class="gs-nav-link" href="/materias">Matérias</a>
             <a class="gs-nav-link is-active" href="/publicar" aria-current="page">Publicar</a>
-            <a class="gs-nav-link" href="/login">Entrar</a>
+            <a class="gs-nav-link" href="/notificacoes">
+                Notificações
+                <span class="gs-badge" data-nao-lidas hidden></span>
+            </a>
+            <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
+            <a class="gs-nav-link" href="/perfil">Perfil</a>
         </nav>
     </header>
 
@@ -64,6 +77,16 @@
                         <span class="gs-form-hint" id="dica-conteudo">Explique o que você já tentou. Use @usuario para
                             chamar alguém.</span>
                         <span class="gs-form-error" id="erro-conteudo" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="imagem">
+                        <span class="gs-label">Link de uma imagem <span class="gs-badge">opcional</span></span>
+                        <input class="gs-input" type="url" id="imagem" name="imagem"
+                            placeholder="https://exemplo.com/foto-do-caderno.png"
+                            aria-describedby="dica-imagem erro-imagem" />
+                        <span class="gs-form-hint" id="dica-imagem">Cole o endereço de uma foto do quadro ou do
+                            caderno.</span>
+                        <span class="gs-form-error" id="erro-imagem" role="alert"></span>
                     </label>
 
                     <div class="gs-compose-foot">

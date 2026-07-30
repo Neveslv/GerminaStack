@@ -18,12 +18,13 @@ SQL e não implementa repositórios ou CRUD.
 | `Reaction` | `reactions` |
 | `Notification` | `notifications` |
 
-Todos os IDs usam `int64`, e todos os campos `created_at` usam `time.Time`.
+Todos os IDs usam `int64`, e todos os campos `created_at` usam `*time.Time`
+porque o SQL permite `NULL`, apesar de definir `current_timestamp` como default.
 Cada campo possui tags `db` e `json` com o nome `snake_case` da respectiva
 coluna.
 
 `User.Password` é mapeado para a coluna `password`, mas usa `json:"-"` para
-nunca ser exposto pela serialização JSON.
+nunca expor a chave nem o valor secreto pela serialização JSON.
 
 ## Campos opcionais
 
@@ -31,10 +32,13 @@ Os ponteiros representam colunas que podem ser nulas:
 
 - `Subject.YearID`;
 - `User.ProfileImageURL` e `User.ProfileImageDescription`;
+- `Preference.ContrastTheme`, `Preference.FontFamily`,
+  `Preference.FontSpacing` e `Preference.FontSize`;
 - `Post.ImageURL` e `Post.ImageDescription`;
 - `Reaction.PostID`, `Reaction.CommentID` e
   `Reaction.CommentOnCommentID`;
-- `Notification.PostID`.
+- `Notification.PostID`;
+- `CreatedAt` em todos os nove models.
 
 Nos pares de imagem, uma string apontada, ainda que vazia, está presente. Essa
 semântica corresponde ao `NULL`/`NOT NULL` usado pelos `CHECK` do SQL.
@@ -52,7 +56,8 @@ Os enums são tipos baseados em `string`, e cada tipo oferece `IsValid() bool`.
 - `ReactionType`: `like` e `dislike`.
 
 As constantes exportadas evitam repetir esses valores literais no restante da
-aplicação.
+aplicação. Os quatro campos enumerados de `Preference` são ponteiros: `nil`
+representa `NULL`, enquanto um valor presente deve pertencer ao enum.
 
 ## Validação
 
@@ -61,8 +66,8 @@ As structs que espelham invariantes `CHECK` oferecem `Validate() error`:
 - `User.Validate()` exige imagem de perfil e descrição ambas ausentes ou ambas
   presentes;
 - `Post.Validate()` aplica a mesma regra à imagem do post;
-- `Preference.Validate()` rejeita qualquer valor fora dos quatro enums de
-  acessibilidade;
+- `Preference.Validate()` aceita preferências ausentes e rejeita qualquer valor
+  presente fora dos quatro enums de acessibilidade;
 - `Reaction.Validate()` exige exatamente um alvo entre post, comentário e
   resposta, além de um tipo de reação válido.
 

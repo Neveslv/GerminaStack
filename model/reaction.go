@@ -29,7 +29,7 @@ type Reaction struct {
 	CommentID          *int64       `db:"id_comment" json:"id_comment"`
 	CommentOnCommentID *int64       `db:"id_comment_on_comment" json:"id_comment_on_comment"`
 	ReactionType       ReactionType `db:"reaction_type" json:"reaction_type"`
-	CreatedAt          time.Time    `db:"created_at" json:"created_at"`
+	CreatedAt          *time.Time   `db:"created_at" json:"created_at"`
 }
 
 func (reaction Reaction) Validate() error {

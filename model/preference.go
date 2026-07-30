@@ -82,27 +82,27 @@ func (size FontSize) IsValid() bool {
 }
 
 type Preference struct {
-	ID            int64         `db:"id" json:"id"`
-	UserID        int64         `db:"id_user" json:"id_user"`
-	ContrastTheme ContrastTheme `db:"contrast_theme" json:"contrast_theme"`
-	FontFamily    FontFamily    `db:"font_family" json:"font_family"`
-	FontSpacing   FontSpacing   `db:"font_spacing" json:"font_spacing"`
-	FontSize      FontSize      `db:"font_size" json:"font_size"`
-	CreatedAt     time.Time     `db:"created_at" json:"created_at"`
+	ID            int64          `db:"id" json:"id"`
+	UserID        int64          `db:"id_user" json:"id_user"`
+	ContrastTheme *ContrastTheme `db:"contrast_theme" json:"contrast_theme"`
+	FontFamily    *FontFamily    `db:"font_family" json:"font_family"`
+	FontSpacing   *FontSpacing   `db:"font_spacing" json:"font_spacing"`
+	FontSize      *FontSize      `db:"font_size" json:"font_size"`
+	CreatedAt     *time.Time     `db:"created_at" json:"created_at"`
 }
 
 func (preference Preference) Validate() error {
-	if !preference.ContrastTheme.IsValid() {
-		return fmt.Errorf("tema de contraste inválido: %q", preference.ContrastTheme)
+	if preference.ContrastTheme != nil && !preference.ContrastTheme.IsValid() {
+		return fmt.Errorf("tema de contraste inválido: %q", *preference.ContrastTheme)
 	}
-	if !preference.FontFamily.IsValid() {
-		return fmt.Errorf("família de fonte inválida: %q", preference.FontFamily)
+	if preference.FontFamily != nil && !preference.FontFamily.IsValid() {
+		return fmt.Errorf("família de fonte inválida: %q", *preference.FontFamily)
 	}
-	if !preference.FontSpacing.IsValid() {
-		return fmt.Errorf("espaçamento de fonte inválido: %q", preference.FontSpacing)
+	if preference.FontSpacing != nil && !preference.FontSpacing.IsValid() {
+		return fmt.Errorf("espaçamento de fonte inválido: %q", *preference.FontSpacing)
 	}
-	if !preference.FontSize.IsValid() {
-		return fmt.Errorf("tamanho de fonte inválido: %q", preference.FontSize)
+	if preference.FontSize != nil && !preference.FontSize.IsValid() {
+		return fmt.Errorf("tamanho de fonte inválido: %q", *preference.FontSize)
 	}
 
 	return nil

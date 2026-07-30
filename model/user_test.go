@@ -10,6 +10,10 @@ func stringPointer(value string) *string {
 	return &value
 }
 
+func pointerTo[T any](value T) *T {
+	return &value
+}
+
 func TestUserValidateProfileImagePair(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -67,12 +71,14 @@ func TestUserValidateProfileImagePair(t *testing.T) {
 }
 
 func TestUserJSONUsesSnakeCaseAndHidesPassword(t *testing.T) {
+	const secret = "valor-ultrassecreto-9f53"
+
 	user := User{
 		YearID:                  7,
 		ProfileImageURL:         stringPointer("profile.png"),
 		ProfileImageDescription: stringPointer("Foto de perfil"),
 		Username:                "aluna",
-		Password:                "segredo",
+		Password:                secret,
 	}
 
 	payload, err := json.Marshal(user)
@@ -87,6 +93,9 @@ func TestUserJSONUsesSnakeCaseAndHidesPassword(t *testing.T) {
 
 	if _, exists := decoded["password"]; exists {
 		t.Fatal("password não pode aparecer no JSON")
+	}
+	if strings.Contains(string(payload), secret) {
+		t.Fatal("o valor secreto de password não pode aparecer no JSON")
 	}
 	if got := decoded["id_year"]; got != float64(7) {
 		t.Fatalf("id_year = %v, esperado 7", got)

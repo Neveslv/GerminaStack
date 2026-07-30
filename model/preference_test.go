@@ -7,10 +7,10 @@ import (
 
 func validPreference() Preference {
 	return Preference{
-		ContrastTheme: ContrastThemeNormal,
-		FontFamily:    FontFamilyNormal,
-		FontSpacing:   FontSpacingNormal,
-		FontSize:      FontSizeNormal,
+		ContrastTheme: pointerTo(ContrastThemeNormal),
+		FontFamily:    pointerTo(FontFamilyNormal),
+		FontSpacing:   pointerTo(FontSpacingNormal),
+		FontSize:      pointerTo(FontSizeNormal),
 	}
 }
 
@@ -21,34 +21,42 @@ func TestPreferenceValidate(t *testing.T) {
 		errorContext string
 	}{
 		{
+			name: "valores ausentes",
+			change: func(preference *Preference) {
+				*preference = Preference{}
+			},
+		},
+		{
 			name:   "válida",
 			change: func(*Preference) {},
 		},
 		{
 			name: "tema inválido",
 			change: func(preference *Preference) {
-				preference.ContrastTheme = ContrastTheme("inexistente")
+				preference.ContrastTheme = pointerTo(
+					ContrastTheme("inexistente"),
+				)
 			},
 			errorContext: "tema de contraste",
 		},
 		{
 			name: "família inválida",
 			change: func(preference *Preference) {
-				preference.FontFamily = FontFamily("inexistente")
+				preference.FontFamily = pointerTo(FontFamily("inexistente"))
 			},
 			errorContext: "família de fonte",
 		},
 		{
 			name: "espaçamento inválido",
 			change: func(preference *Preference) {
-				preference.FontSpacing = FontSpacing("inexistente")
+				preference.FontSpacing = pointerTo(FontSpacing("inexistente"))
 			},
 			errorContext: "espaçamento de fonte",
 		},
 		{
 			name: "tamanho inválido",
 			change: func(preference *Preference) {
-				preference.FontSize = FontSize("inexistente")
+				preference.FontSize = pointerTo(FontSize("inexistente"))
 			},
 			errorContext: "tamanho de fonte",
 		},

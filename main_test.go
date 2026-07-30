@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"germinaStack/auth"
 )
 
 func TestNewHTTPServerLeavesWriteMarginAfterAuthOperationTimeout(t *testing.T) {
@@ -12,7 +14,8 @@ func TestNewHTTPServerLeavesWriteMarginAfterAuthOperationTimeout(t *testing.T) {
 	const operationTimeout = 37 * time.Second
 	server := newHTTPServer(":8080", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), operationTimeout)
 
-	if got := server.WriteTimeout - operationTimeout; got < 3*time.Second {
-		t.Fatalf("write timeout margin = %v, want at least 3s", got)
+	minimumMargin := server.ReadTimeout + auth.ChallengeInvalidationTimeout + httpResponseGrace
+	if got := server.WriteTimeout - operationTimeout; got < minimumMargin {
+		t.Fatalf("write timeout margin = %v, want at least %v", got, minimumMargin)
 	}
 }

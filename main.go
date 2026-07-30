@@ -18,10 +18,11 @@ import (
 )
 
 const (
-	tokenTTL         = 24 * time.Hour
-	migrationTimeout = 15 * time.Second
-	shutdownTimeout  = 10 * time.Second
-	httpWriteMargin  = 3 * time.Second
+	tokenTTL          = 24 * time.Hour
+	migrationTimeout  = 15 * time.Second
+	shutdownTimeout   = 10 * time.Second
+	httpReadTimeout   = 10 * time.Second
+	httpResponseGrace = 2 * time.Second
 )
 
 type systemClock struct{}
@@ -91,12 +92,17 @@ func run() error {
 }
 
 func newHTTPServer(address string, handler http.Handler, operationTimeout time.Duration) *http.Server {
+	writeTimeout := operationTimeout +
+		httpReadTimeout +
+		auth.ChallengeInvalidationTimeout +
+		httpResponseGrace
+
 	return &http.Server{
 		Addr:              address,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      operationTimeout + httpWriteMargin,
+		ReadTimeout:       httpReadTimeout,
+		WriteTimeout:      writeTimeout,
 		IdleTimeout:       60 * time.Second,
 	}
 }

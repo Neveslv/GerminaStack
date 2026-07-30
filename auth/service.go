@@ -9,9 +9,9 @@ import (
 )
 
 const (
-	ChallengeTTL         = 10 * time.Minute
-	ChallengeMaxAttempts = 5
-	invalidationTimeout  = 3 * time.Second
+	ChallengeTTL                 = 10 * time.Minute
+	ChallengeMaxAttempts         = 5
+	ChallengeInvalidationTimeout = 3 * time.Second
 )
 
 var (
@@ -142,7 +142,7 @@ func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (
 }
 
 func (s *Service) invalidateAfterSendFailure(ctx context.Context, challengeID string, at time.Time) {
-	invalidationContext, cancel := context.WithTimeout(context.WithoutCancel(ctx), invalidationTimeout)
+	invalidationContext, cancel := context.WithTimeout(context.WithoutCancel(ctx), ChallengeInvalidationTimeout)
 	defer cancel()
 	_ = s.challenges.Invalidate(invalidationContext, challengeID, at)
 }

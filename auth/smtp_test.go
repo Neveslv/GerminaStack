@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"mime/quotedprintable"
 	"net"
 	"net/textproto"
 	"strings"
@@ -83,10 +84,26 @@ func TestSMTPMailerBuildsUTF8MIMEMessageWithoutExposingPassword(t *testing.T) {
 		t.Fatalf("wireMessage() error = %v", err)
 	}
 	text := string(raw)
-	for _, want := range []string{"From:", "To: ana@example.com", "Subject:", "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Código: 123456"} {
+	for _, want := range []string{
+		"From:",
+		"To: ana@example.com",
+		"Subject:",
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=UTF-8",
+		"Content-Transfer-Encoding: quoted-printable",
+	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("wire message missing %q:\n%s", want, text)
 		}
+	}
+	for _, octet := range raw {
+		if octet > 0x7f {
+			t.Fatalf("wire message contains non-ASCII octet 0x%x without requiring 8BITMIME", octet)
+		}
+	}
+	decodedBody := decodeQuotedPrintableBody(t, text)
+	if !strings.Contains(decodedBody, "Código: 123456") {
+		t.Fatalf("decoded body = %q, want authentication code", decodedBody)
 	}
 	if strings.Contains(text, "smtp-password") {
 		t.Fatal("wire message contains SMTP password")
@@ -116,7 +133,7 @@ func TestSMTPMailerHonorsCanceledContextBeforeDial(t *testing.T) {
 	}
 }
 
-func TestSMTPMailerSendsThroughSTARTTLSAuthAndData(t *testing.T) {
+func TestSMTPMailerSendsQuotedPrintableThroughSTARTTLSWithout8BITMIME(t *testing.T) {
 	t.Parallel()
 
 	certificate, roots := smtpTestCertificate(t)
@@ -148,7 +165,13 @@ func TestSMTPMailerSendsThroughSTARTTLSAuthAndData(t *testing.T) {
 	if result.transcript.auth != "\x00mailer\x00smtp-password" {
 		t.Fatalf("AUTH payload = %q", result.transcript.auth)
 	}
-	if !strings.Contains(result.transcript.data, "Código: 123456") ||
+	for _, octet := range []byte(result.transcript.data) {
+		if octet > 0x7f {
+			t.Fatalf("SMTP DATA contains non-ASCII octet 0x%x without 8BITMIME", octet)
+		}
+	}
+	if !strings.Contains(result.transcript.data, "Content-Transfer-Encoding: quoted-printable") ||
+		!strings.Contains(decodeQuotedPrintableBody(t, result.transcript.data), "Código: 123456") ||
 		!strings.Contains(result.transcript.data, "Subject:") {
 		t.Fatalf("DATA did not contain the message: %q", result.transcript.data)
 	}
@@ -469,6 +492,20 @@ func awaitSMTPServerResult(t *testing.T, results <-chan smtpServerResult) smtpSe
 		t.Fatal("SMTP test server did not finish")
 		return smtpServerResult{}
 	}
+}
+
+func decodeQuotedPrintableBody(t *testing.T, wireMessage string) string {
+	t.Helper()
+	normalized := strings.ReplaceAll(wireMessage, "\r\n", "\n")
+	_, encodedBody, found := strings.Cut(normalized, "\n\n")
+	if !found {
+		t.Fatalf("wire message has no header/body separator: %q", wireMessage)
+	}
+	decoded, err := io.ReadAll(quotedprintable.NewReader(strings.NewReader(encodedBody)))
+	if err != nil {
+		t.Fatalf("decode quoted-printable body: %v", err)
+	}
+	return string(decoded)
 }
 
 func smtpTestCertificate(t *testing.T) (tls.Certificate, *x509.CertPool) {

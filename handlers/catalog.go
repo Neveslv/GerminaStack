@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -74,7 +75,12 @@ func (h *CatalogHandler) ListYears(c *gin.Context) {
 
 func (h *CatalogHandler) ListSubjects(c *gin.Context) {
 	var yearID *int64
-	if values, supplied := c.Request.URL.Query()["year_id"]; supplied {
+	query, err := url.ParseQuery(c.Request.URL.RawQuery)
+	if err != nil {
+		writeInvalidCatalogRequest(c)
+		return
+	}
+	if values, supplied := query["year_id"]; supplied {
 		if len(values) != 1 {
 			writeInvalidCatalogRequest(c)
 			return

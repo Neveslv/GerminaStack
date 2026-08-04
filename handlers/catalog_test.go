@@ -52,7 +52,7 @@ func TestCatalogHandlerListsSubjectsAndValidatesOptionalFilter(t *testing.T) {
 		t.Fatalf("response exposes persistence name: %#v", got[0])
 	}
 
-	for _, query := range []string{"?year_id=", "?year_id=abc", "?year_id=0", "?year_id=-1", "?year_id=1&year_id=2"} {
+	for _, query := range []string{"?year_id=", "?year_id=abc", "?year_id=0", "?year_id=-1", "?year_id=1&year_id=2", "?year_id=7;foo=x"} {
 		invalidRepo := &catalogRepositoryFake{}
 		response := performRequest(NewCatalogHandler(invalidRepo, time.Second).ListSubjects, http.MethodGet, "/api/subjects"+query, "", "")
 		if response.Code != http.StatusBadRequest || invalidRepo.listSubjectsCalls != 0 {

@@ -162,8 +162,9 @@ Com essa flag ligada, toda função em `api.js` responde com dados de `js/mock/`
 chamar o back-end. É a única chave que precisa mudar quando os endpoints do Gin
 estiverem prontos — nenhuma página ou componente sabe que os dados são falsos.
 
-`config.js` também resolve `API_BASE_URL` (local vs. produção) e `ROTA_LOGIN` (para onde
-`api.js` redireciona em um 401).
+`config.js` também define `API_BASE_URL`, fixo em `http://localhost:8080` (apresentação
+em localhost, sem ambiente de produção por enquanto), e `ROTA_LOGIN` (para onde `api.js`
+redireciona em um 401).
 
 ## `js/api.js` — a única porta de saída
 

@@ -14,6 +14,7 @@ type Credential struct {
 	Username     string
 	Email        string
 	PasswordHash string
+	IsAdmin      bool
 }
 
 type PostgresCredentialRepository struct {
@@ -25,7 +26,7 @@ func NewPostgresCredentialRepository(db *sql.DB) *PostgresCredentialRepository {
 }
 
 func (r *PostgresCredentialRepository) FindByUsername(ctx context.Context, username string) (Credential, error) {
-	const query = `SELECT id, username, email, password
+	const query = `SELECT id, username, email, password, is_admin
 FROM users
 WHERE username = $1`
 
@@ -35,6 +36,7 @@ WHERE username = $1`
 		&credential.Username,
 		&credential.Email,
 		&credential.PasswordHash,
+		&credential.IsAdmin,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Credential{}, ErrCredentialNotFound

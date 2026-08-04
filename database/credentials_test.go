@@ -10,7 +10,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-const credentialQuery = `SELECT id, username, email, password
+const credentialQuery = `SELECT id, username, email, password, is_admin
 FROM users
 WHERE username = $1`
 
@@ -25,8 +25,8 @@ func TestPostgresCredentialRepositoryFindByUsername(t *testing.T) {
 
 	mock.ExpectQuery(regexp.QuoteMeta(credentialQuery)).
 		WithArgs("ana").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password"}).
-			AddRow(int64(42), "ana", "ana@example.com", "$2a$12$hash"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin"}).
+			AddRow(int64(42), "ana", "ana@example.com", "$2a$12$hash", true))
 
 	repo := NewPostgresCredentialRepository(db)
 	got, err := repo.FindByUsername(context.Background(), "ana")
@@ -34,7 +34,7 @@ func TestPostgresCredentialRepositoryFindByUsername(t *testing.T) {
 		t.Fatalf("FindByUsername() error = %v", err)
 	}
 
-	want := (Credential{ID: 42, Username: "ana", Email: "ana@example.com", PasswordHash: "$2a$12$hash"})
+	want := (Credential{ID: 42, Username: "ana", Email: "ana@example.com", PasswordHash: "$2a$12$hash", IsAdmin: true})
 	if got != want {
 		t.Fatalf("FindByUsername() = %#v, want %#v", got, want)
 	}

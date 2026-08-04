@@ -84,6 +84,7 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 				contractField("Username", "", "username", "username"),
 				contractField("Email", "", "email", "email"),
 				contractField("Password", "", "password", "-"),
+				contractField("IsAdmin", false, "is_admin", "is_admin"),
 				contractField(
 					"CreatedAt",
 					(*time.Time)(nil),

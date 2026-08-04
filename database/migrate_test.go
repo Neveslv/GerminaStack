@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-func TestMigrateExecutesTwoFactorChallengeSchema(t *testing.T) {
+func TestMigrateExecutesCoreSchemaBeforeTwoFactorChallengeSchema(t *testing.T) {
 	t.Parallel()
 
 	db, mock, err := sqlmock.New()
@@ -17,8 +17,10 @@ func TestMigrateExecutesTwoFactorChallengeSchema(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	pattern := regexp.QuoteMeta("CREATE TABLE IF NOT EXISTS two_factor_challenges")
-	mock.ExpectExec(pattern).WillReturnResult(sqlmock.NewResult(0, 0))
+	corePattern := regexp.QuoteMeta("CREATE TABLE IF NOT EXISTS years")
+	twoFactorPattern := regexp.QuoteMeta("CREATE TABLE IF NOT EXISTS two_factor_challenges")
+	mock.ExpectExec(corePattern).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec(twoFactorPattern).WillReturnResult(sqlmock.NewResult(0, 0))
 
 	if err := Migrate(context.Background(), db); err != nil {
 		t.Fatalf("Migrate() error = %v", err)

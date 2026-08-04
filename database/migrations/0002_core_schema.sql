@@ -96,13 +96,15 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS idx_subjects_year ON subjects (id_year);
 CREATE INDEX IF NOT EXISTS idx_users_year ON users (id_year);
-CREATE INDEX IF NOT EXISTS idx_posts_subject_created ON posts (id_subject, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_posts_user_created ON posts (id_user, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments (id_post, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_created ON posts (created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_subject_created ON posts (id_subject, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_user_created ON posts (id_user, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments (id_post, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_user ON comments (id_user);
-CREATE INDEX IF NOT EXISTS idx_comments_on_comments_comment_created ON comments_on_comments (id_comment, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comments_on_comments_comment_created ON comments_on_comments (id_comment, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_on_comments_user ON comments_on_comments (id_user);
 CREATE INDEX IF NOT EXISTS idx_reactions_post ON reactions (id_post) WHERE id_post IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_reactions_comment ON reactions (id_comment) WHERE id_comment IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_reactions_comment_on_comment ON reactions (id_comment_on_comment) WHERE id_comment_on_comment IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_notifications_user_read_created ON notifications (id_user, is_read, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications (id_user, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_unread_created ON notifications (id_user, created_at DESC, id DESC) WHERE is_read = FALSE;

@@ -10,6 +10,7 @@ go.work
 go.work.sum
 .env
 .env.*
+!.env.example
 
 # Node (dependencia de front-end: germinastack-ui-components)
 # static/vendor/germinastack/ e o resultado sincronizado do pacote e FICA versionado,

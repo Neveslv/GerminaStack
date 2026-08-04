@@ -22,7 +22,7 @@ var codePattern = regexp.MustCompile(`^[0-9]{6}$`)
 
 type AuthService interface {
 	StartLogin(context.Context, string, string) (string, error)
-	CompleteLogin(context.Context, string, string) (int64, error)
+	CompleteLogin(context.Context, string, string) (auth.Principal, error)
 }
 
 type AuthHandler struct {
@@ -46,24 +46,26 @@ func NewAuthHandler(service AuthService, jwtSecret string, cookieSecure bool, to
 }
 
 type loginRequest struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
 	var request loginRequest
-	if err := decodeJSON(c, &request); err != nil ||
-		len(request.Username) < 1 ||
-		len(request.Username) > 100 ||
-		len(request.Password) < 1 ||
-		len(request.Password) > 1024 {
+	if err := decodeJSON(c, &request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "requisi\u00e7\u00e3o inv\u00e1lida"})
+		return
+	}
+	_, emailErr := auth.ParseInstitutionalEmail(request.Email)
+	passwordBytes := len([]byte(request.Password))
+	if emailErr != nil || passwordBytes < 8 || passwordBytes > 72 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "requisição inválida"})
 		return
 	}
 
 	operationContext, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
-	challengeID, err := h.service.StartLogin(operationContext, request.Username, request.Password)
+	challengeID, err := h.service.StartLogin(operationContext, request.Email, request.Password)
 	switch {
 	case err == nil:
 		c.JSON(http.StatusAccepted, gin.H{"challenge_id": challengeID})
@@ -91,7 +93,7 @@ func (h *AuthHandler) CompleteLogin(c *gin.Context) {
 
 	operationContext, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
-	userID, err := h.service.CompleteLogin(operationContext, request.ChallengeID, request.Code)
+	principal, err := h.service.CompleteLogin(operationContext, request.ChallengeID, request.Code)
 	if err != nil {
 		h.writeCompleteLoginError(c, err)
 		return
@@ -99,7 +101,7 @@ func (h *AuthHandler) CompleteLogin(c *gin.Context) {
 
 	issuedAt := h.now().UTC()
 	expiresAt := issuedAt.Add(h.tokenTTL)
-	token, err := auth.GenerateTokenWithTimes(strconv.FormatInt(userID, 10), false, h.jwtSecret, issuedAt, expiresAt)
+	token, err := auth.GenerateTokenWithTimes(strconv.FormatInt(principal.ID, 10), principal.IsAdmin, h.jwtSecret, issuedAt, expiresAt)
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": auth.ErrUnavailable.Error()})
 		return
@@ -111,6 +113,21 @@ func (h *AuthHandler) CompleteLogin(c *gin.Context) {
 		Path:     "/",
 		Expires:  expiresAt,
 		MaxAge:   int(h.tokenTTL / time.Second),
+		Secure:   h.cookieSecure,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
+}
+
+func (h *AuthHandler) Logout(c *gin.Context) {
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     auth.CookieName,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(1, 0).UTC(),
+		MaxAge:   -1,
 		Secure:   h.cookieSecure,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,

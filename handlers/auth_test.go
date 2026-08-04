@@ -25,7 +25,7 @@ func TestLoginReturnsAcceptedChallenge(t *testing.T) {
 
 	service := &authServiceFake{startID: "challenge-id"}
 	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
-	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"correct-password"}`, "application/json")
+	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"email":"ana.silva@institutojef.org.br","password":"correct-password"}`, "application/json")
 
 	if recorder.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202; body=%s", recorder.Code, recorder.Body.String())
@@ -37,8 +37,8 @@ func TestLoginReturnsAcceptedChallenge(t *testing.T) {
 	if len(body) != 1 || body["challenge_id"] != "challenge-id" {
 		t.Fatalf("body = %#v", body)
 	}
-	if service.startUsername != "ana" || service.startPassword != "correct-password" {
-		t.Fatalf("service inputs = %q/%q", service.startUsername, service.startPassword)
+	if service.startEmail != "ana.silva@institutojef.org.br" || service.startPassword != "correct-password" {
+		t.Fatalf("service inputs = %q/%q", service.startEmail, service.startPassword)
 	}
 }
 
@@ -48,14 +48,14 @@ func TestLoginReturnsIdenticalUnauthorizedResponseForInvalidCredentials(t *testi
 	makeResponse := func() *httptest.ResponseRecorder {
 		service := &authServiceFake{startErr: auth.ErrInvalidCredentials}
 		handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
-		return performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"wrong"}`, "application/json")
+		return performRequest(handler.Login, http.MethodPost, "/api/login", `{"email":"ana.silva@institutojef.org.br","password":"wrong-password"}`, "application/json")
 	}
 	first := makeResponse()
 	second := makeResponse()
 	if first.Code != http.StatusUnauthorized || second.Code != http.StatusUnauthorized {
 		t.Fatalf("statuses = %d/%d, want 401/401", first.Code, second.Code)
 	}
-	if first.Body.String() != second.Body.String() || first.Body.String() != `{"error":"credenciais inválidas"}` {
+	if first.Body.String() != second.Body.String() || first.Body.String() != "{\"error\":\""+auth.ErrInvalidCredentials.Error()+"\"}" {
 		t.Fatalf("responses differ or expose detail: %q / %q", first.Body.String(), second.Body.String())
 	}
 }
@@ -69,13 +69,16 @@ func TestLoginRejectsMalformedAndOversizedInput(t *testing.T) {
 		contentType string
 	}{
 		{name: "malformed JSON", body: `{`, contentType: "application/json"},
-		{name: "unknown field", body: `{"username":"ana","password":"secret","extra":true}`, contentType: "application/json"},
-		{name: "missing username", body: `{"username":"","password":"secret"}`, contentType: "application/json"},
-		{name: "long username", body: `{"username":"` + strings.Repeat("a", 101) + `","password":"secret"}`, contentType: "application/json"},
-		{name: "long password", body: `{"username":"ana","password":"` + strings.Repeat("a", 1025) + `"}`, contentType: "application/json"},
-		{name: "wrong content type", body: `{"username":"ana","password":"secret"}`, contentType: "text/plain"},
-		{name: "oversized body", body: `{"username":"ana","password":"` + strings.Repeat("a", 5000) + `"}`, contentType: "application/json"},
-		{name: "trailing JSON", body: `{"username":"ana","password":"secret"} {}`, contentType: "application/json"},
+		{name: "unknown field", body: `{"email":"ana.silva@institutojef.org.br","password":"password","extra":true}`, contentType: "application/json"},
+		{name: "missing email", body: `{"email":"","password":"password"}`, contentType: "application/json"},
+		{name: "long email", body: `{"email":"` + strings.Repeat("a", 101) + `","password":"password"}`, contentType: "application/json"},
+		{name: "uppercase email", body: `{"email":"Ana.Silva@institutojef.org.br","password":"password"}`, contentType: "application/json"},
+		{name: "short password", body: `{"email":"ana.silva@institutojef.org.br","password":"1234567"}`, contentType: "application/json"},
+		{name: "long password", body: `{"email":"ana.silva@institutojef.org.br","password":"` + strings.Repeat("a", 73) + `"}`, contentType: "application/json"},
+		{name: "noninstitutional email", body: `{"email":"ana.silva@example.com","password":"password"}`, contentType: "application/json"},
+		{name: "wrong content type", body: `{"email":"ana.silva@institutojef.org.br","password":"password"}`, contentType: "text/plain"},
+		{name: "oversized body", body: `{"email":"ana.silva@institutojef.org.br","password":"` + strings.Repeat("a", 5000) + `"}`, contentType: "application/json"},
+		{name: "trailing JSON", body: `{"email":"ana.silva@institutojef.org.br","password":"password"} {}`, contentType: "application/json"},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -98,7 +101,7 @@ func TestLoginMapsDependencyFailureToUnavailable(t *testing.T) {
 	t.Parallel()
 
 	handler := NewAuthHandler(&authServiceFake{startErr: auth.ErrUnavailable}, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
-	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"email":"ana.silva@institutojef.org.br","password":"password"}`, "application/json")
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503", recorder.Code)
 	}
@@ -111,7 +114,7 @@ func TestCompleteLoginSetsJWTInExplicitSecureCookie(t *testing.T) {
 	t.Parallel()
 
 	now := time.Now().UTC().Truncate(time.Second)
-	service := &authServiceFake{completeUserID: 42}
+	service := &authServiceFake{completePrincipal: auth.Principal{ID: 42, IsAdmin: true}}
 	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 	handler.now = func() time.Time { return now }
 	recorder := performRequest(handler.CompleteLogin, http.MethodPost, "/api/login/2fa", `{"challenge_id":"challenge-id","code":"123456"}`, "application/json")
@@ -138,7 +141,7 @@ func TestCompleteLoginSetsJWTInExplicitSecureCookie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ParseToken(cookie) error = %v", err)
 	}
-	if claims.Subject != "42" || claims.IsAdmin {
+	if claims.Subject != "42" || !claims.IsAdmin {
 		t.Fatalf("claims = %#v", claims)
 	}
 	if claims.IssuedAt == nil || !claims.IssuedAt.Time.Equal(now) || claims.ExpiresAt == nil || !claims.ExpiresAt.Time.Equal(now.Add(24*time.Hour)) {
@@ -213,7 +216,7 @@ func TestLoginPassesExplicitDeadlineToService(t *testing.T) {
 	}
 	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, operationTimeout)
 	startedAt := time.Now()
-	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"email":"ana.silva@institutojef.org.br","password":"password"}`, "application/json")
 
 	if recorder.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want 202; body=%s", recorder.Code, recorder.Body.String())
@@ -231,9 +234,9 @@ func TestCompleteLoginPassesExplicitDeadlineToService(t *testing.T) {
 	const operationTimeout = 250 * time.Millisecond
 	var hasDeadline bool
 	service := &authServiceFake{
-		completeFunc: func(ctx context.Context, _, _ string) (int64, error) {
+		completeFunc: func(ctx context.Context, _, _ string) (auth.Principal, error) {
 			_, hasDeadline = ctx.Deadline()
-			return 42, nil
+			return auth.Principal{ID: 42}, nil
 		},
 	}
 	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, operationTimeout)
@@ -257,12 +260,12 @@ func TestLoginTimeoutReturnsSafeUnavailableResponse(t *testing.T) {
 		},
 	}
 	handler := NewAuthHandler(service, "jwt-test-secret", true, 24*time.Hour, 10*time.Millisecond)
-	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+	recorder := performRequest(handler.Login, http.MethodPost, "/api/login", `{"email":"ana.silva@institutojef.org.br","password":"password"}`, "application/json")
 
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503; body=%s", recorder.Code, recorder.Body.String())
 	}
-	if recorder.Body.String() != `{"error":"serviço temporariamente indisponível"}` {
+	if recorder.Body.String() != "{\"error\":\""+auth.ErrUnavailable.Error()+"\"}" {
 		t.Fatalf("body = %q, want generic unavailable response", recorder.Body.String())
 	}
 }
@@ -281,13 +284,33 @@ func TestLoginPreservesClientCancellation(t *testing.T) {
 
 	requestContext, cancel := context.WithCancel(context.Background())
 	cancel()
-	recorder := performRequestWithContext(handler.Login, requestContext, http.MethodPost, "/api/login", `{"username":"ana","password":"secret"}`, "application/json")
+	recorder := performRequestWithContext(handler.Login, requestContext, http.MethodPost, "/api/login", `{"email":"ana.silva@institutojef.org.br","password":"password"}`, "application/json")
 
 	if !errors.Is(receivedErr, context.Canceled) {
 		t.Fatalf("service context error = %v, want context canceled", receivedErr)
 	}
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503; body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestLogoutExpiresTokenCookieWithHardenedFlags(t *testing.T) {
+	t.Parallel()
+	handler := NewAuthHandler(&authServiceFake{}, "jwt-test-secret", true, 24*time.Hour, time.Second)
+	recorder := performRequest(handler.Logout, http.MethodPost, "/api/logout", "", "application/json")
+	if recorder.Code != http.StatusNoContent || recorder.Body.Len() != 0 {
+		t.Fatalf("status/body = %d/%q, want 204/empty", recorder.Code, recorder.Body.String())
+	}
+	cookies := recorder.Result().Cookies()
+	if len(cookies) != 1 {
+		t.Fatalf("cookies = %d, want 1", len(cookies))
+	}
+	cookie := cookies[0]
+	if cookie.Name != auth.CookieName || cookie.Value != "" || cookie.Path != "/" || !cookie.Secure || !cookie.HttpOnly || cookie.SameSite != http.SameSiteLaxMode || cookie.MaxAge != -1 {
+		t.Fatalf("expired cookie = %#v", cookie)
+	}
+	if !cookie.Expires.Before(time.Now()) {
+		t.Fatalf("cookie expiration = %v, want in the past", cookie.Expires)
 	}
 }
 
@@ -306,23 +329,23 @@ func performRequestWithContext(handler gin.HandlerFunc, requestContext context.C
 }
 
 type authServiceFake struct {
-	startID        string
-	startErr       error
-	startCalls     int
-	startUsername  string
-	startPassword  string
-	completeUserID int64
-	completeErr    error
-	completeCalls  int
-	completeID     string
-	completeCode   string
-	startFunc      func(context.Context, string, string) (string, error)
-	completeFunc   func(context.Context, string, string) (int64, error)
+	startID           string
+	startErr          error
+	startCalls        int
+	startEmail        string
+	startPassword     string
+	completePrincipal auth.Principal
+	completeErr       error
+	completeCalls     int
+	completeID        string
+	completeCode      string
+	startFunc         func(context.Context, string, string) (string, error)
+	completeFunc      func(context.Context, string, string) (auth.Principal, error)
 }
 
 func (f *authServiceFake) StartLogin(ctx context.Context, username, password string) (string, error) {
 	f.startCalls++
-	f.startUsername = username
+	f.startEmail = username
 	f.startPassword = password
 	if f.startFunc != nil {
 		return f.startFunc(ctx, username, password)
@@ -330,12 +353,12 @@ func (f *authServiceFake) StartLogin(ctx context.Context, username, password str
 	return f.startID, f.startErr
 }
 
-func (f *authServiceFake) CompleteLogin(ctx context.Context, challengeID, code string) (int64, error) {
+func (f *authServiceFake) CompleteLogin(ctx context.Context, challengeID, code string) (auth.Principal, error) {
 	f.completeCalls++
 	f.completeID = challengeID
 	f.completeCode = code
 	if f.completeFunc != nil {
 		return f.completeFunc(ctx, challengeID, code)
 	}
-	return f.completeUserID, f.completeErr
+	return f.completePrincipal, f.completeErr
 }

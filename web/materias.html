@@ -8,7 +8,8 @@
     <meta name="description" content="Canais de duvidas por materia, com as publicacoes de cada disciplina." />
 
     <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
-    <link rel="stylesheet" href="/static/css/temas.css" />
+    <link rel="stylesheet" href="/static/vendor/germinastack/themes.css" />
+    <link rel="stylesheet" href="/static/vendor/germinastack/notifications.css" />
 
     <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
     <script src="/static/js/tema-inicial.js"></script>
@@ -31,10 +32,22 @@
             <a class="gs-nav-link" href="/">Feed</a>
             <a class="gs-nav-link is-active" href="/materias" aria-current="page">Matérias</a>
             <a class="gs-nav-link" href="/publicar">Publicar</a>
-            <a class="gs-nav-link" href="/notificacoes">
-                Notificações
-                <span class="gs-badge" data-nao-lidas hidden></span>
-            </a>
+            <div class="gs-menu" data-gs-menu>
+                <button class="gs-nav-link" type="button" data-gs-menu-trigger aria-haspopup="menu"
+                    aria-expanded="false">
+                    Notificações
+                    <span class="gs-badge" data-nao-lidas hidden></span>
+                </button>
+                <div class="gs-menu-panel gs-notif-panel" data-gs-menu-panel hidden>
+                    <div class="gs-notif-head">
+                        <strong>Notificações</strong>
+                        <button class="gs-btn gs-btn-ghost" type="button" data-notif-marcar-lidas disabled>
+                            Marcar todas como lidas
+                        </button>
+                    </div>
+                    <div class="gs-notif-lista" data-notif-lista></div>
+                </div>
+            </div>
             <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
             <a class="gs-nav-link" href="/perfil">Perfil</a>
         </nav>

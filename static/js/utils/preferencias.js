@@ -2,8 +2,9 @@
  * Preferências de acessibilidade do usuário.
  *
  * Os valores são exatamente os aceitos pelos CHECK da tabela `preferences`.
- * Se um valor novo entrar no banco, ele entra aqui e no static/css/temas.css —
- * em nenhum outro lugar.
+ * Se um valor novo entrar no banco, ele entra aqui e no CSS que trata os
+ * atributos data-tema/data-fonte — hoje static/vendor/germinastack/themes.css,
+ * publicado pela lib (ver static/README.md).
  */
 
 const CHAVE = 'germinastack:preferencias';

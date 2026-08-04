@@ -1,0 +1,542 @@
+/**
+ * Camada de temas do produto — fica FORA do kit, de propósito.
+ *
+ * O kit resolve acessibilidade que depende do sistema operacional
+ * (prefers-contrast, forced-colors, prefers-reduced-motion), mas não expõe
+ * um tema escolhido pelo usuário. A tabela `preferences` do nosso banco exige
+ * exatamente isso, e os valores aqui espelham os CHECK do schema:
+ *
+ *   contrast_theme in ('normal','dark','high_contrast','black_yellow','yellow_black')
+ *   font_family    in ('normal','arial','verdana','lexend','atkinson_hyperlegible','open_dyslexic')
+ *
+ * O tema entra em <html data-tema="..." data-fonte="...">.
+ *
+ * Por que existe a seção "reescrita de superfícies" mais abaixo: o kit fixa
+ * `rgba(255, 255, 255, ...)` direto em ~30 componentes (card, input, modal,
+ * toast, menu...). Só trocar os tokens `--gs-*` deixaria os cards brancos num
+ * fundo escuro. Então cada superfície branca vira uma variável nossa, com o
+ * valor original como padrão — no tema `normal` o resultado é pixel a pixel
+ * igual ao kit, e os outros temas só precisam trocar a variável.
+ */
+
+/* =========================================================
+   1. Variáveis de superfície (padrão = valores atuais do kit)
+   ========================================================= */
+
+:root {
+    --gsk-fundo-pagina:
+        radial-gradient(circle at top right, rgba(255, 179, 71, 0.16), transparent 28%),
+        radial-gradient(circle at top left, rgba(32, 99, 212, 0.12), transparent 34%),
+        linear-gradient(180deg, rgba(11, 31, 58, 0.08), transparent 320px),
+        var(--gs-page);
+
+    --gsk-superficie-cartao: rgba(255, 255, 255, 0.88);
+    --gsk-superficie-flutuante: rgba(255, 255, 255, 0.98);
+    --gsk-superficie-campo: rgba(255, 255, 255, 0.92);
+    --gsk-superficie-suave: rgba(255, 255, 255, 0.8);
+    --gsk-superficie-chip: rgba(255, 255, 255, 0.72);
+    --gsk-superficie-bolha: rgba(255, 255, 255, 0.9);
+
+    --gsk-topo-fundo: rgba(11, 31, 58, 0.9);
+    --gsk-topo-texto: #ffffff;
+    --gsk-topo-borda: rgba(255, 255, 255, 0.12);
+    --gsk-topo-realce: rgba(255, 255, 255, 0.14);
+
+    --gsk-hero-fundo:
+        radial-gradient(circle at top right, rgba(255, 209, 125, 0.18), transparent 34%),
+        linear-gradient(145deg, #0a1b33, #173b66 65%, #204878);
+    --gsk-hero-texto: #ffffff;
+
+    --gsk-primario-fundo: linear-gradient(135deg, var(--gs-navy), var(--gs-navy-soft));
+    --gsk-primario-texto: #ffffff;
+
+    --gsk-alerta-fundo: #fff7ed;
+    --gsk-alerta-borda: #fed7aa;
+    --gsk-alerta-texto: #9a3412;
+
+    --gsk-fonte: "Segoe UI", Inter, Arial, sans-serif;
+}
+
+/* =========================================================
+   2. Reescrita das superfícies que o kit fixou em branco
+   ========================================================= */
+
+body {
+    background: var(--gsk-fundo-pagina);
+    font-family: var(--gsk-fonte);
+}
+
+.gs-card,
+.gs-side-card,
+.gs-post,
+.gs-metric-card,
+.gs-stat-card,
+.gs-empty-state,
+.gs-feature-card,
+.gs-code-block,
+.gs-doc-panel {
+    background: var(--gsk-superficie-cartao);
+}
+
+.gs-modal,
+.gs-menu-panel,
+.gs-toast,
+.gs-popover,
+.gs-select-panel,
+.gs-datepicker-panel {
+    background: var(--gsk-superficie-flutuante);
+}
+
+.gs-input,
+.gs-textarea,
+.gs-input-shell,
+.gs-select-native select,
+.gs-select-trigger,
+.gs-datepicker-trigger,
+.gs-select-search input,
+.gs-datatable-pagination button {
+    background: var(--gsk-superficie-campo);
+}
+
+.gs-tabs,
+.gs-segmented,
+.gs-accordion-item,
+.gs-table-wrap,
+.gs-datatable,
+.gs-kpi-pill,
+.gs-btn-secondary {
+    background: var(--gsk-superficie-suave);
+}
+
+.gs-chip {
+    background: var(--gsk-superficie-chip);
+}
+
+.gs-comment-bubble,
+.gs-reply-bubble {
+    background: var(--gsk-superficie-bolha);
+}
+
+.gs-topbar {
+    border-bottom-color: var(--gsk-topo-borda);
+    background: var(--gsk-topo-fundo);
+    color: var(--gsk-topo-texto);
+}
+
+.gs-nav-link.is-active {
+    background: var(--gsk-topo-realce);
+}
+
+.gs-hero {
+    background: var(--gsk-hero-fundo);
+    color: var(--gsk-hero-texto);
+}
+
+.gs-btn-primary {
+    background: var(--gsk-primario-fundo);
+    color: var(--gsk-primario-texto);
+}
+
+.gs-btn-primary:hover {
+    background: var(--gsk-primario-fundo);
+    filter: brightness(1.08);
+}
+
+.gs-alert {
+    border-color: var(--gsk-alerta-borda);
+    background: var(--gsk-alerta-fundo);
+    color: var(--gsk-alerta-texto);
+}
+
+/* =========================================================
+   3. contrast_theme = 'dark'
+   ========================================================= */
+
+[data-tema="dark"] {
+    color-scheme: dark;
+
+    --gs-page: #0b1524;
+    --gs-canvas: #111e30;
+    --gs-surface: #17263b;
+    --gs-surface-soft: #142132;
+    --gs-surface-strong: #1e3049;
+    --gs-hairline: #24374f;
+    --gs-hairline-soft: #1c2c41;
+    --gs-hairline-strong: #375070;
+
+    --gs-ink: #eef3fa;
+    --gs-charcoal: #d5e0ee;
+    --gs-slate: #adbdd0;
+    --gs-steel: #93a6bd;
+    --gs-muted: #7f93ab;
+
+    /* `--gs-navy` é usado pelo kit como cor de texto E como fundo de item
+       selecionado. No escuro só dá para atender um dos dois: viramos texto
+       claro aqui e corrigimos os casos de fundo logo abaixo. */
+    --gs-navy: #cfe0f5;
+    --gs-navy-soft: #9dc0e8;
+    --gs-navy-deep: #071427;
+
+    --gs-danger: #ff7b7b;
+    --gs-success: #4fd6a4;
+    --gs-info: #79b0ff;
+
+    --gs-blue-bg: #16294a;
+    --gs-blue-text: #a9c9ff;
+    --gs-amber-bg: #3b2c10;
+    --gs-amber-text: #ffd98a;
+    --gs-rose-bg: #3d1728;
+    --gs-rose-text: #ffb3d0;
+    --gs-mint-bg: #103327;
+    --gs-mint-text: #86e9c1;
+    --gs-sky-bg: #102c3f;
+    --gs-sky-text: #9bd8ff;
+    --gs-lavender-bg: #241d3d;
+    --gs-lavender-text: #cbbcff;
+
+    --gsk-fundo-pagina: var(--gs-page);
+    --gsk-superficie-cartao: #111e30;
+    --gsk-superficie-flutuante: #16253a;
+    --gsk-superficie-campo: #0e1a2b;
+    --gsk-superficie-suave: #142132;
+    --gsk-superficie-chip: #17263b;
+    --gsk-superficie-bolha: #142132;
+
+    --gsk-topo-fundo: #0a1322;
+    --gsk-topo-borda: #24374f;
+    --gsk-topo-realce: rgba(255, 255, 255, 0.1);
+
+    --gsk-hero-fundo: linear-gradient(145deg, #10243f, #16345c);
+
+    --gsk-primario-fundo: linear-gradient(135deg, #ffb347, #ef9828);
+    --gsk-primario-texto: #10243f;
+
+    --gsk-alerta-fundo: #3b2410;
+    --gsk-alerta-borda: #6d4415;
+    --gsk-alerta-texto: #ffcf9a;
+}
+
+/* =========================================================
+   4. contrast_theme = 'high_contrast'
+   ========================================================= */
+
+[data-tema="high_contrast"] {
+    --gs-page: #ffffff;
+    --gs-canvas: #ffffff;
+    --gs-surface: #ffffff;
+    --gs-surface-soft: #ffffff;
+    --gs-surface-strong: #f2f2f2;
+    --gs-hairline: #000000;
+    --gs-hairline-soft: #000000;
+    --gs-hairline-strong: #000000;
+
+    --gs-ink: #000000;
+    --gs-charcoal: #000000;
+    --gs-slate: #1a1a1a;
+    --gs-steel: #1a1a1a;
+    --gs-muted: #333333;
+
+    --gs-danger: #a80000;
+    --gs-success: #00551f;
+    --gs-info: #00308f;
+
+    --gs-navy: #000000;
+    --gs-navy-soft: #000000;
+
+    --gs-blue-bg: #ffffff;
+    --gs-blue-text: #00308f;
+    --gs-amber-bg: #ffffff;
+    --gs-amber-text: #5a3c00;
+    --gs-rose-bg: #ffffff;
+    --gs-rose-text: #8a0038;
+    --gs-mint-bg: #ffffff;
+    --gs-mint-text: #00551f;
+
+    --gs-focus-ring: 3px solid #000000;
+    --gs-focus-ring-color: #000000;
+
+    --gsk-fundo-pagina: #ffffff;
+    --gsk-superficie-cartao: #ffffff;
+    --gsk-superficie-flutuante: #ffffff;
+    --gsk-superficie-campo: #ffffff;
+    --gsk-superficie-suave: #ffffff;
+    --gsk-superficie-chip: #ffffff;
+    --gsk-superficie-bolha: #ffffff;
+
+    --gsk-topo-fundo: #000000;
+    --gsk-topo-texto: #ffffff;
+    --gsk-topo-borda: #ffffff;
+    --gsk-topo-realce: #ffffff;
+
+    --gsk-hero-fundo: #000000;
+    --gsk-hero-texto: #ffffff;
+
+    --gsk-primario-fundo: #000000;
+    --gsk-primario-texto: #ffffff;
+
+    --gsk-alerta-fundo: #ffffff;
+    --gsk-alerta-borda: #000000;
+    --gsk-alerta-texto: #a80000;
+}
+
+/* =========================================================
+   5. contrast_theme = 'black_yellow'  (fundo preto, texto amarelo)
+   ========================================================= */
+
+[data-tema="black_yellow"] {
+    color-scheme: dark;
+
+    --gs-page: #000000;
+    --gs-canvas: #000000;
+    --gs-surface: #141400;
+    --gs-surface-soft: #0d0d00;
+    --gs-surface-strong: #1f1f00;
+    --gs-hairline: #ffdd00;
+    --gs-hairline-soft: #6b5d00;
+    --gs-hairline-strong: #ffdd00;
+
+    --gs-ink: #ffdd00;
+    --gs-charcoal: #ffdd00;
+    --gs-slate: #ffe64d;
+    --gs-steel: #ffe64d;
+    --gs-muted: #d4b900;
+
+    --gs-danger: #ff8a80;
+    --gs-success: #a6ff8a;
+    --gs-info: #8ad4ff;
+
+    --gs-blue-bg: #000000;
+    --gs-blue-text: #ffdd00;
+    --gs-amber-bg: #000000;
+    --gs-amber-text: #ffdd00;
+    --gs-rose-bg: #000000;
+    --gs-rose-text: #ffdd00;
+    --gs-mint-bg: #000000;
+    --gs-mint-text: #ffdd00;
+
+    --gs-navy: #ffdd00;
+    --gs-navy-soft: #ffdd00;
+
+    --gs-focus-ring: 3px solid #ffdd00;
+    --gs-focus-ring-color: #ffdd00;
+
+    --gsk-fundo-pagina: #000000;
+    --gsk-superficie-cartao: #000000;
+    --gsk-superficie-flutuante: #0d0d00;
+    --gsk-superficie-campo: #0d0d00;
+    --gsk-superficie-suave: #000000;
+    --gsk-superficie-chip: #000000;
+    --gsk-superficie-bolha: #000000;
+
+    --gsk-topo-fundo: #000000;
+    --gsk-topo-texto: #ffdd00;
+    --gsk-topo-borda: #ffdd00;
+    --gsk-topo-realce: #332e00;
+
+    --gsk-hero-fundo: #000000;
+    --gsk-hero-texto: #ffdd00;
+
+    --gsk-primario-fundo: #ffdd00;
+    --gsk-primario-texto: #000000;
+
+    --gsk-alerta-fundo: #000000;
+    --gsk-alerta-borda: #ffdd00;
+    --gsk-alerta-texto: #ffdd00;
+}
+
+/* =========================================================
+   6. contrast_theme = 'yellow_black'  (fundo amarelo, texto preto)
+   ========================================================= */
+
+[data-tema="yellow_black"] {
+    --gs-page: #ffdd00;
+    --gs-canvas: #ffdd00;
+    --gs-surface: #ffe95c;
+    --gs-surface-soft: #ffe233;
+    --gs-surface-strong: #f5d000;
+    --gs-hairline: #000000;
+    --gs-hairline-soft: #66590a;
+    --gs-hairline-strong: #000000;
+
+    --gs-ink: #000000;
+    --gs-charcoal: #000000;
+    --gs-slate: #1a1a00;
+    --gs-steel: #1a1a00;
+    --gs-muted: #3d3600;
+
+    --gs-navy: #000000;
+    --gs-navy-soft: #000000;
+
+    --gs-danger: #8a0000;
+    --gs-success: #00450f;
+    --gs-info: #002a80;
+
+    --gs-blue-bg: #ffdd00;
+    --gs-blue-text: #000000;
+    --gs-amber-bg: #ffdd00;
+    --gs-amber-text: #000000;
+    --gs-rose-bg: #ffdd00;
+    --gs-rose-text: #000000;
+    --gs-mint-bg: #ffdd00;
+    --gs-mint-text: #000000;
+
+    --gs-focus-ring: 3px solid #000000;
+    --gs-focus-ring-color: #000000;
+
+    --gsk-fundo-pagina: #ffdd00;
+    --gsk-superficie-cartao: #ffdd00;
+    --gsk-superficie-flutuante: #ffe95c;
+    --gsk-superficie-campo: #fff4a3;
+    --gsk-superficie-suave: #ffe95c;
+    --gsk-superficie-chip: #ffdd00;
+    --gsk-superficie-bolha: #ffe95c;
+
+    --gsk-topo-fundo: #ffdd00;
+    --gsk-topo-texto: #000000;
+    --gsk-topo-borda: #000000;
+    --gsk-topo-realce: #f0c800;
+
+    --gsk-hero-fundo: #ffdd00;
+    --gsk-hero-texto: #000000;
+
+    --gsk-primario-fundo: #000000;
+    --gsk-primario-texto: #ffdd00;
+
+    --gsk-alerta-fundo: #ffdd00;
+    --gsk-alerta-borda: #000000;
+    --gsk-alerta-texto: #8a0000;
+}
+
+/**
+ * Correção do conflito de papel do `--gs-navy`.
+ *
+ * Nos temas em que ele virou cor CLARA (dark e black_yellow), as regras do kit
+ * que o usam como FUNDO ficam com texto branco fixo por cima — ilegível.
+ * Aqui esses casos passam a usar o acento do tema com texto escuro.
+ */
+[data-tema="dark"] .gs-btn.is-active,
+[data-tema="dark"] .gs-btn[aria-pressed="true"],
+[data-tema="dark"] .gs-chip[aria-pressed="true"],
+[data-tema="dark"] .gs-tab.is-active,
+[data-tema="dark"] .gs-segmented button.is-active {
+    background: var(--gs-orange);
+    color: #10243f;
+}
+
+[data-tema="black_yellow"] .gs-btn.is-active,
+[data-tema="black_yellow"] .gs-btn[aria-pressed="true"],
+[data-tema="black_yellow"] .gs-chip[aria-pressed="true"],
+[data-tema="black_yellow"] .gs-tab.is-active,
+[data-tema="black_yellow"] .gs-segmented button.is-active {
+    background: #ffdd00;
+    color: #000000;
+}
+
+/* O fundo do avatar é pastel em qualquer tema, então a inicial precisa
+   continuar escura mesmo quando o texto geral clareia. */
+[data-tema="dark"] .gs-avatar,
+[data-tema="dark"] .gs-avatar-sm,
+[data-tema="dark"] .gs-avatar-xs,
+[data-tema="black_yellow"] .gs-avatar,
+[data-tema="black_yellow"] .gs-avatar-sm,
+[data-tema="black_yellow"] .gs-avatar-xs {
+    color: #10243f;
+}
+
+/* Nos temas de alto contraste o texto do hero e do topo herda do tema,
+   então os elementos que o kit deixou semitransparentes precisam voltar
+   ao contraste cheio para não sumir. */
+[data-tema="high_contrast"] .gs-hero p,
+[data-tema="black_yellow"] .gs-hero p,
+[data-tema="yellow_black"] .gs-hero p,
+[data-tema="high_contrast"] .gs-nav-link,
+[data-tema="black_yellow"] .gs-nav-link,
+[data-tema="yellow_black"] .gs-nav-link {
+    color: currentColor;
+}
+
+[data-tema="high_contrast"] .gs-hero-stats span,
+[data-tema="black_yellow"] .gs-hero-stats span,
+[data-tema="yellow_black"] .gs-hero-stats span {
+    border-color: currentColor;
+    background: transparent;
+    color: currentColor;
+}
+
+/* Sombra colorida some fora do tema normal: em fundo chapado ela vira sujeira. */
+[data-tema="high_contrast"],
+[data-tema="black_yellow"],
+[data-tema="yellow_black"] {
+    --gs-shadow-subtle: none;
+    --gs-shadow-card: none;
+    --gs-shadow-float: none;
+    --gs-shadow-glow: none;
+}
+
+/* =========================================================
+   7. font_family
+   ========================================================= */
+
+/**
+ * Lexend, Atkinson Hyperlegible e OpenDyslexic são fontes desenhadas para
+ * leitura com baixa visão e dislexia, e não vêm instaladas por padrão.
+ * A pilha abaixo funciona offline caindo em fontes de traço parecido.
+ * Para valer de verdade, baixe os .woff2 em static/fonts/ e descomente
+ * os @font-face no fim deste arquivo.
+ */
+
+[data-fonte="arial"] {
+    --gsk-fonte: Arial, Helvetica, sans-serif;
+}
+
+[data-fonte="verdana"] {
+    --gsk-fonte: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+[data-fonte="lexend"] {
+    --gsk-fonte: "Lexend", "Trebuchet MS", "Segoe UI", sans-serif;
+}
+
+[data-fonte="atkinson_hyperlegible"] {
+    --gsk-fonte: "Atkinson Hyperlegible", Verdana, Tahoma, sans-serif;
+}
+
+[data-fonte="open_dyslexic"] {
+    --gsk-fonte: "OpenDyslexic", "Comic Sans MS", Verdana, sans-serif;
+    letter-spacing: 0.02em;
+    word-spacing: 0.08em;
+}
+
+/**
+ * O pacote só embute o peso Regular (400) de OpenDyslexic
+ * (dist/fonts/OpenDyslexic-Regular.woff2, @font-face em src/css/01-foundations.css).
+ * Texto em <strong>/<b> pede peso 700, que não existe nessa fonte — o
+ * navegador sintetiza um "falso negrito" esticando o traçado, o que numa
+ * fonte já desenhada com traços grossos produz letras visivelmente
+ * espaçadas e distorcidas. Forçar peso normal evita a síntese; é também a
+ * recomendação de uso da própria OpenDyslexic, que não tem corte em negrito
+ * por design.
+ */
+[data-fonte="open_dyslexic"] strong,
+[data-fonte="open_dyslexic"] b {
+    font-weight: 400;
+}
+
+/*
+Lexend e Atkinson Hyperlegible não vêm embutidas no pacote (ao contrário de
+OpenDyslexic) e caem na pilha de fallback acima até serem adicionadas. Para
+embutir de verdade, adicione o arquivo em src/fonts/, o @font-face abaixo e
+inclua o arquivo na cópia de fontes do rollup.config.mjs.
+
+@font-face {
+    font-family: "Lexend";
+    src: url("../fonts/lexend.woff2") format("woff2");
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Atkinson Hyperlegible";
+    src: url("../fonts/atkinson-hyperlegible.woff2") format("woff2");
+    font-display: swap;
+}
+*/

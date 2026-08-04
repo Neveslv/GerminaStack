@@ -6,6 +6,6 @@
     "postinstall": "node ./node_modules/germinastack-ui-components/scripts/copy-to-static.mjs ./static/vendor/germinastack"
   },
   "dependencies": {
-    "germinastack-ui-components": "1.0.2"
+    "germinastack-ui-components": "1.0.4"
   }
 }

@@ -34,9 +34,28 @@ func TestDiscussionHandlerListsPostsValidatesFiltersAndReturnsEmptyList(t *testi
 	}
 }
 
+func TestDiscussionHandlerReturnsNotFoundForMissingThreadParents(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name   string
+		handle gin.HandlerFunc
+		path   string
+	}{
+		{name: "post", handle: (&DiscussionHandler{repository: &discussionRepositoryFake{err: database.ErrDiscussionNotFound}, operationTimeout: time.Second}).ListComments, path: "/api/posts/4/comments"},
+		{name: "comment", handle: (&DiscussionHandler{repository: &discussionRepositoryFake{err: database.ErrDiscussionNotFound}, operationTimeout: time.Second}).ListReplies, path: "/api/comments/5/replies"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			response := performDiscussionRequest(tt.handle, http.MethodGet, tt.path, "", 42)
+			if response.Code != http.StatusNotFound {
+				t.Fatalf("status = %d, want %d", response.Code, http.StatusNotFound)
+			}
+		})
+	}
+}
+
 func TestDiscussionHandlerListsThreadReads(t *testing.T) {
 	t.Parallel()
-	repository := &discussionRepositoryFake{}
+	repository := &discussionRepositoryFake{post: model.Post{ID: 4}, comment: model.Comment{ID: 5}}
 	handler := NewDiscussionHandler(repository, time.Second)
 	comments := performDiscussionRequest(handler.ListComments, http.MethodGet, "/api/posts/4/comments?page=2", "", 0)
 	replies := performDiscussionRequest(handler.ListReplies, http.MethodGet, "/api/comments/5/replies", "", 0)

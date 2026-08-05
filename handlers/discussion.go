@@ -421,6 +421,10 @@ func (h *DiscussionHandler) ListComments(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
+	if _, err := h.repository.GetPost(ctx, postID); err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
 	comments, err := h.repository.ListComments(ctx, postID, pagination)
 	if err != nil {
 		writeDiscussionError(c, err)
@@ -443,6 +447,10 @@ func (h *DiscussionHandler) ListReplies(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
+	if _, err := h.repository.GetComment(ctx, commentID); err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
 	replies, err := h.repository.ListReplies(ctx, commentID, pagination)
 	if err != nil {
 		writeDiscussionError(c, err)

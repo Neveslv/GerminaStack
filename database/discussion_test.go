@@ -87,3 +87,13 @@ func TestDiscussionMutationErrorHidesDatabaseDetails(t *testing.T) {
 		t.Fatalf("discussionMutationError() = %v", err)
 	}
 }
+
+func TestPostgresDiscussionRepositoryMapsMissingDelete(t *testing.T) {
+	t.Parallel()
+	db, mock := newCatalogMock(t)
+	mock.ExpectExec("DELETE FROM posts").WithArgs(int64(404)).WillReturnResult(sqlmock.NewResult(0, 0))
+	if err := NewPostgresDiscussionRepository(db).DeletePost(context.Background(), 404); !errors.Is(err, ErrDiscussionNotFound) {
+		t.Fatalf("DeletePost() error = %v, want ErrDiscussionNotFound", err)
+	}
+	assertCatalogExpectations(t, mock)
+}

@@ -38,6 +38,18 @@ func TestAccountHandlerScopesProfileAndPreferencesToJWT(t *testing.T) {
 	}
 }
 
+func TestAccountHandlerValidatesProfileImagePairAndDefaultsPreferences(t *testing.T) {
+	t.Parallel()
+	repository := &accountRepositoryFake{profile: model.User{ID: 42, Name: "Ana"}, preferenceNotFound: true}
+	handler := NewAccountHandler(repository, time.Second)
+	unpaired := performAccountRequest(handler.UpdateProfile, http.MethodPatch, "/api/me", `{"profile_image_url":"https://image"}`, 42)
+	paired := performAccountRequest(handler.UpdateProfile, http.MethodPatch, "/api/me", `{"profile_image_url":"https://image","profile_image_description":"Ana em frente à tela"}`, 42)
+	preferences := performAccountRequest(handler.GetPreferences, http.MethodGet, "/api/me/preferences", "", 42)
+	if unpaired.Code != http.StatusBadRequest || paired.Code != http.StatusOK || preferences.Code != http.StatusOK || repository.profile.ProfileImageURL == nil || repository.profile.ProfileImageDescription == nil {
+		t.Fatalf("status/profile/preferences = %d/%d/%d; repository=%#v", unpaired.Code, paired.Code, preferences.Code, repository)
+	}
+}
+
 type accountRepositoryFake struct {
 	profile            model.User
 	profileUserID      int64

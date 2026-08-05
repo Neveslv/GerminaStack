@@ -131,6 +131,25 @@ func TestDiscussionHandlerCreatesMessagesAndProtectsMutations(t *testing.T) {
 	}
 }
 
+func TestDiscussionHandlerAllowsAdminToMutateAnotherUsersPost(t *testing.T) {
+	t.Parallel()
+	repository := &discussionRepositoryFake{post: model.Post{ID: 8, UserID: 7, SubjectID: 3, Title: "Title", Content: "Body"}}
+	handler := NewDiscussionHandler(repository, time.Second)
+	router := gin.New()
+	router.PATCH("/api/posts/:id", func(c *gin.Context) {
+		c.Set(auth.ContextUserID, int64(42))
+		c.Set(auth.ContextIsAdmin, true)
+		handler.UpdatePost(c)
+	})
+	request := httptest.NewRequest(http.MethodPatch, "/api/posts/8", strings.NewReader(`{"content":"changed"}`))
+	request.Header.Set("Content-Type", "application/json")
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("admin status = %d; body=%s", recorder.Code, recorder.Body.String())
+	}
+}
+
 type discussionRepositoryFake struct {
 	post                 model.Post
 	comment              model.Comment

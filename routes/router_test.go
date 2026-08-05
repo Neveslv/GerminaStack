@@ -18,7 +18,8 @@ func TestNewRouterRegistersIssueTenAPIRoutes(t *testing.T) {
 	userHandler := handlers.NewUserHandler(routerUserRepositoryFake{}, 2*time.Second)
 	catalogHandler := handlers.NewCatalogHandler(&routeCatalogRepositoryFake{}, 2*time.Second)
 	discussionHandler := handlers.NewDiscussionHandler(&routeDiscussionRepositoryFake{}, 2*time.Second)
-	router := NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, "jwt-test-secret")
+	accountHandler := handlers.NewAccountHandler(&routeAccountRepositoryFake{}, 2*time.Second)
+	router := NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, accountHandler, "jwt-test-secret")
 
 	got := make(map[string]bool)
 	for _, route := range router.Routes() {

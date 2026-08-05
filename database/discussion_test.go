@@ -64,6 +64,22 @@ func TestPostgresDiscussionRepositoryUsesDatabaseFunctions(t *testing.T) {
 	assertCatalogExpectations(t, mock)
 }
 
+func TestPostgresDiscussionRepositoryCreatesMessagesThroughDatabaseFunction(t *testing.T) {
+	t.Parallel()
+	db, mock := newCatalogMock(t)
+	const createQuery = `SELECT create_message($1, $2, $3, $4, $5, $6, $7)`
+	mock.ExpectQuery(regexp.QuoteMeta(createQuery)).WithArgs("post", int64(42), int64(3), "Body", "Title", nil, nil).WillReturnRows(sqlmock.NewRows([]string{"create_message"}).AddRow(int64(8)))
+	mock.ExpectQuery("SELECT id, id_user, id_subject, title").WithArgs(int64(8)).WillReturnRows(
+		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "created_at"}).
+			AddRow(int64(8), int64(42), int64(3), "Title", nil, nil, "Body", int64(0), int64(0), nil),
+	)
+	post, err := NewPostgresDiscussionRepository(db).CreatePost(context.Background(), 42, PostInput{SubjectID: 3, Title: "Title", Content: "Body"})
+	if err != nil || post.ID != 8 || post.UserID != 42 {
+		t.Fatalf("CreatePost() = (%#v, %v)", post, err)
+	}
+	assertCatalogExpectations(t, mock)
+}
+
 func TestDiscussionMutationErrorHidesDatabaseDetails(t *testing.T) {
 	t.Parallel()
 	err := discussionMutationError("react", &pgconn.PgError{Code: "23503", Message: "private detail"})

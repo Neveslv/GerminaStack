@@ -25,7 +25,10 @@ func TestRegisterDiscussionRoutesRegistersOnlyDocumentedSurface(t *testing.T) {
 		got[route.Method+" "+route.Path] = true
 	}
 	for _, want := range []string{
-		"GET /api/posts", "GET /api/posts/:id/comments", "GET /api/comments/:id/replies",
+		"GET /api/posts", "POST /api/posts", "GET /api/posts/:id", "PATCH /api/posts/:id", "DELETE /api/posts/:id",
+		"GET /api/posts/:id/comments", "POST /api/posts/:id/comments",
+		"GET /api/comments/:id/replies", "POST /api/comments/:id/replies",
+		"PATCH /api/comments/:id", "DELETE /api/comments/:id", "PATCH /api/replies/:id", "DELETE /api/replies/:id",
 		"PUT /api/posts/:id/reaction", "PUT /api/comments/:id/reaction", "PUT /api/replies/:id/reaction",
 		"GET /api/notifications", "PATCH /api/notifications/read-all",
 	} {
@@ -68,6 +71,37 @@ type routeDiscussionRepositoryFake struct {
 	notificationUserID int64
 	notificationCalls  int
 }
+
+func (f *routeDiscussionRepositoryFake) GetPost(context.Context, int64) (model.Post, error) {
+	return model.Post{}, nil
+}
+func (f *routeDiscussionRepositoryFake) CreatePost(context.Context, int64, database.PostInput) (model.Post, error) {
+	return model.Post{}, nil
+}
+func (f *routeDiscussionRepositoryFake) UpdatePost(context.Context, int64, database.PostInput) (model.Post, error) {
+	return model.Post{}, nil
+}
+func (f *routeDiscussionRepositoryFake) DeletePost(context.Context, int64) error { return nil }
+func (f *routeDiscussionRepositoryFake) GetComment(context.Context, int64) (model.Comment, error) {
+	return model.Comment{}, nil
+}
+func (f *routeDiscussionRepositoryFake) CreateComment(context.Context, int64, int64, database.CommentInput) (model.Comment, error) {
+	return model.Comment{}, nil
+}
+func (f *routeDiscussionRepositoryFake) UpdateComment(context.Context, int64, database.CommentInput) (model.Comment, error) {
+	return model.Comment{}, nil
+}
+func (f *routeDiscussionRepositoryFake) DeleteComment(context.Context, int64) error { return nil }
+func (f *routeDiscussionRepositoryFake) GetReply(context.Context, int64) (model.CommentOnComment, error) {
+	return model.CommentOnComment{}, nil
+}
+func (f *routeDiscussionRepositoryFake) CreateReply(context.Context, int64, int64, database.CommentInput) (model.CommentOnComment, error) {
+	return model.CommentOnComment{}, nil
+}
+func (f *routeDiscussionRepositoryFake) UpdateReply(context.Context, int64, database.CommentInput) (model.CommentOnComment, error) {
+	return model.CommentOnComment{}, nil
+}
+func (f *routeDiscussionRepositoryFake) DeleteReply(context.Context, int64) error { return nil }
 
 func (f *routeDiscussionRepositoryFake) ListPosts(context.Context, database.PostFilter) ([]model.Post, error) {
 	return []model.Post{}, nil

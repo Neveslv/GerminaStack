@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"germinaStack/auth"
@@ -16,6 +18,18 @@ import (
 )
 
 type DiscussionRepository interface {
+	GetPost(context.Context, int64) (model.Post, error)
+	CreatePost(context.Context, int64, database.PostInput) (model.Post, error)
+	UpdatePost(context.Context, int64, database.PostInput) (model.Post, error)
+	DeletePost(context.Context, int64) error
+	GetComment(context.Context, int64) (model.Comment, error)
+	CreateComment(context.Context, int64, int64, database.CommentInput) (model.Comment, error)
+	UpdateComment(context.Context, int64, database.CommentInput) (model.Comment, error)
+	DeleteComment(context.Context, int64) error
+	GetReply(context.Context, int64) (model.CommentOnComment, error)
+	CreateReply(context.Context, int64, int64, database.CommentInput) (model.CommentOnComment, error)
+	UpdateReply(context.Context, int64, database.CommentInput) (model.CommentOnComment, error)
+	DeleteReply(context.Context, int64) error
 	ListPosts(context.Context, database.PostFilter) ([]model.Post, error)
 	ListComments(context.Context, int64, database.Pagination) ([]model.Comment, error)
 	ListReplies(context.Context, int64, database.Pagination) ([]model.CommentOnComment, error)
@@ -31,6 +45,236 @@ type DiscussionHandler struct {
 
 func NewDiscussionHandler(repository DiscussionRepository, operationTimeout time.Duration) *DiscussionHandler {
 	return &DiscussionHandler{repository: repository, operationTimeout: operationTimeout}
+}
+
+func (h *DiscussionHandler) GetPost(c *gin.Context) {
+	postID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	post, err := h.repository.GetPost(ctx, postID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, post)
+}
+
+func (h *DiscussionHandler) CreatePost(c *gin.Context) {
+	userID, ok := discussionUserID(c)
+	if !ok {
+		return
+	}
+	input, ok := decodePostInput(c, nil, true)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	post, err := h.repository.CreatePost(ctx, userID, input)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, post)
+}
+
+func (h *DiscussionHandler) UpdatePost(c *gin.Context) {
+	postID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	post, err := h.repository.GetPost(ctx, postID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if !canMutateDiscussion(c, post.UserID) {
+		return
+	}
+	input, ok := decodePostInput(c, &post, false)
+	if !ok {
+		return
+	}
+	updated, err := h.repository.UpdatePost(ctx, postID, input)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, updated)
+}
+
+func (h *DiscussionHandler) DeletePost(c *gin.Context) {
+	postID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	post, err := h.repository.GetPost(ctx, postID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if !canMutateDiscussion(c, post.UserID) {
+		return
+	}
+	if err := h.repository.DeletePost(ctx, postID); err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
+}
+
+func (h *DiscussionHandler) CreateComment(c *gin.Context) {
+	postID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	userID, ok := discussionUserID(c)
+	if !ok {
+		return
+	}
+	input, ok := decodeCommentInput(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	comment, err := h.repository.CreateComment(ctx, userID, postID, input)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, comment)
+}
+
+func (h *DiscussionHandler) UpdateComment(c *gin.Context) {
+	commentID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	comment, err := h.repository.GetComment(ctx, commentID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if !canMutateDiscussion(c, comment.UserID) {
+		return
+	}
+	input, ok := decodeCommentInput(c)
+	if !ok {
+		return
+	}
+	updated, err := h.repository.UpdateComment(ctx, commentID, input)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, updated)
+}
+
+func (h *DiscussionHandler) DeleteComment(c *gin.Context) {
+	commentID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	comment, err := h.repository.GetComment(ctx, commentID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if !canMutateDiscussion(c, comment.UserID) {
+		return
+	}
+	if err := h.repository.DeleteComment(ctx, commentID); err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
+}
+
+func (h *DiscussionHandler) CreateReply(c *gin.Context) {
+	commentID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	userID, ok := discussionUserID(c)
+	if !ok {
+		return
+	}
+	input, ok := decodeCommentInput(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	reply, err := h.repository.CreateReply(ctx, userID, commentID, input)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusCreated, reply)
+}
+
+func (h *DiscussionHandler) UpdateReply(c *gin.Context) {
+	replyID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	reply, err := h.repository.GetReply(ctx, replyID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if !canMutateDiscussion(c, reply.UserID) {
+		return
+	}
+	input, ok := decodeCommentInput(c)
+	if !ok {
+		return
+	}
+	updated, err := h.repository.UpdateReply(ctx, replyID, input)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, updated)
+}
+
+func (h *DiscussionHandler) DeleteReply(c *gin.Context) {
+	replyID, ok := positivePathID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	reply, err := h.repository.GetReply(ctx, replyID)
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if !canMutateDiscussion(c, reply.UserID) {
+		return
+	}
+	if err := h.repository.DeleteReply(ctx, replyID); err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
 }
 
 type reactionRequest struct {
@@ -62,6 +306,108 @@ func (h *DiscussionHandler) ListPosts(c *gin.Context) {
 		posts = []model.Post{}
 	}
 	c.JSON(http.StatusOK, posts)
+}
+
+func decodePostInput(c *gin.Context, existing *model.Post, requireCore bool) (database.PostInput, bool) {
+	input := database.PostInput{}
+	if existing != nil {
+		input = database.PostInput{SubjectID: existing.SubjectID, Title: existing.Title, ImageURL: existing.ImageURL, ImageDescription: existing.ImageDescription, Content: existing.Content}
+	}
+	fields, ok := decodeObject(c)
+	if !ok {
+		writeInvalidDiscussionRequest(c)
+		return database.PostInput{}, false
+	}
+	if requireCore {
+		for _, key := range []string{"subject_id", "title", "content"} {
+			if _, exists := fields[key]; !exists {
+				writeInvalidDiscussionRequest(c)
+				return database.PostInput{}, false
+			}
+		}
+	}
+	for key, raw := range fields {
+		switch key {
+		case "subject_id":
+			var subjectID int64
+			if json.Unmarshal(raw, &subjectID) != nil || subjectID <= 0 {
+				writeInvalidDiscussionRequest(c)
+				return database.PostInput{}, false
+			}
+			input.SubjectID = subjectID
+		case "title":
+			value, valid := optionalString(raw, false)
+			if !valid || value == nil || strings.TrimSpace(*value) == "" || len([]byte(*value)) > 200 {
+				writeInvalidDiscussionRequest(c)
+				return database.PostInput{}, false
+			}
+			input.Title = strings.TrimSpace(*value)
+		case "content":
+			value, valid := optionalString(raw, false)
+			if !valid || value == nil || strings.TrimSpace(*value) == "" || len([]byte(*value)) > 10000 {
+				writeInvalidDiscussionRequest(c)
+				return database.PostInput{}, false
+			}
+			input.Content = strings.TrimSpace(*value)
+		case "image_url":
+			value, valid := optionalString(raw, true)
+			if !valid {
+				writeInvalidDiscussionRequest(c)
+				return database.PostInput{}, false
+			}
+			input.ImageURL = value
+		case "image_description":
+			value, valid := optionalString(raw, true)
+			if !valid {
+				writeInvalidDiscussionRequest(c)
+				return database.PostInput{}, false
+			}
+			input.ImageDescription = value
+		default:
+			writeInvalidDiscussionRequest(c)
+			return database.PostInput{}, false
+		}
+	}
+	if input.SubjectID <= 0 || strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Content) == "" || (input.ImageURL == nil) != (input.ImageDescription == nil) {
+		writeInvalidDiscussionRequest(c)
+		return database.PostInput{}, false
+	}
+	return input, true
+}
+
+func decodeCommentInput(c *gin.Context) (database.CommentInput, bool) {
+	fields, ok := decodeObject(c)
+	if !ok || len(fields) != 1 {
+		writeInvalidDiscussionRequest(c)
+		return database.CommentInput{}, false
+	}
+	raw, exists := fields["content"]
+	if !exists {
+		writeInvalidDiscussionRequest(c)
+		return database.CommentInput{}, false
+	}
+	value, valid := optionalString(raw, false)
+	if !valid || value == nil || strings.TrimSpace(*value) == "" || len([]byte(*value)) > 10000 {
+		writeInvalidDiscussionRequest(c)
+		return database.CommentInput{}, false
+	}
+	return database.CommentInput{Content: strings.TrimSpace(*value)}, true
+}
+
+func canMutateDiscussion(c *gin.Context, authorID int64) bool {
+	userID, ok := discussionUserID(c)
+	if !ok {
+		return false
+	}
+	isAdmin, _ := c.Get(auth.ContextIsAdmin)
+	if userID == authorID {
+		return true
+	}
+	if admin, ok := isAdmin.(bool); ok && admin {
+		return true
+	}
+	c.JSON(http.StatusForbidden, gin.H{"error": "acesso proibido"})
+	return false
 }
 
 func (h *DiscussionHandler) ListComments(c *gin.Context) {
@@ -246,6 +592,10 @@ func discussionUserID(c *gin.Context) (int64, bool) {
 func writeDiscussionError(c *gin.Context, err error) {
 	if errors.Is(err, database.ErrDiscussionNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "recurso não encontrado"})
+		return
+	}
+	if errors.Is(err, database.ErrDiscussionInvalid) {
+		writeInvalidDiscussionRequest(c)
 		return
 	}
 	c.JSON(http.StatusServiceUnavailable, gin.H{"error": "serviço indisponível"})

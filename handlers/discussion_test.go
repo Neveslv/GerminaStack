@@ -94,21 +94,98 @@ func TestDiscussionHandlerScopesNotificationsToJWTUser(t *testing.T) {
 	}
 }
 
-type discussionRepositoryFake struct {
-	postFilter          database.PostFilter
-	commentPostID       int64
-	commentPagination   database.Pagination
-	replyCommentID      int64
-	reactionUserID      int64
-	reactionMessageID   int64
-	reactionMessageType string
-	reactionType        model.ReactionType
-	notificationUserID  int64
-	notificationFilter  database.NotificationFilter
-	markedUserID        int64
-	listPostsCalls      int
-	err                 error
+func TestDiscussionHandlerCreatesMessagesAndProtectsMutations(t *testing.T) {
+	t.Parallel()
+	repository := &discussionRepositoryFake{
+		post:    model.Post{ID: 8, UserID: 42, SubjectID: 3, Title: "Title", Content: "Body"},
+		comment: model.Comment{ID: 9, PostID: 8, UserID: 42, Content: "Comment"},
+		reply:   model.CommentOnComment{ID: 10, CommentID: 9, UserID: 42, Content: "Reply"},
+	}
+	handler := NewDiscussionHandler(repository, time.Second)
+	post := performDiscussionRequest(handler.CreatePost, http.MethodPost, "/api/posts", `{"subject_id":3,"title":"Title","content":"Body"}`, 42)
+	comment := performDiscussionRequest(handler.CreateComment, http.MethodPost, "/api/posts/8/comments", `{"content":"Comment"}`, 42)
+	reply := performDiscussionRequest(handler.CreateReply, http.MethodPost, "/api/comments/9/replies", `{"content":"Reply"}`, 42)
+	if post.Code != http.StatusCreated || comment.Code != http.StatusCreated || reply.Code != http.StatusCreated || repository.createPostUserID != 42 || repository.createCommentPostID != 8 || repository.createReplyCommentID != 9 {
+		t.Fatalf("creation status/inputs = %d/%d/%d/%#v", post.Code, comment.Code, reply.Code, repository)
+	}
+
+	for _, tt := range []struct {
+		name   string
+		handle gin.HandlerFunc
+		method string
+		path   string
+		body   string
+		userID int64
+		want   int
+	}{
+		{name: "foreign post update", handle: handler.UpdatePost, method: http.MethodPatch, path: "/api/posts/8", body: `{"content":"changed"}`, userID: 7, want: http.StatusForbidden},
+		{name: "unknown post field", handle: handler.CreatePost, method: http.MethodPost, path: "/api/posts", body: `{"subject_id":3,"title":"Title","content":"Body","user_id":7}`, userID: 42, want: http.StatusBadRequest},
+		{name: "unpaired image", handle: handler.CreatePost, method: http.MethodPost, path: "/api/posts", body: `{"subject_id":3,"title":"Title","content":"Body","image_url":"https://image"}`, userID: 42, want: http.StatusBadRequest},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			response := performDiscussionRequest(tt.handle, tt.method, tt.path, tt.body, tt.userID)
+			if response.Code != tt.want {
+				t.Fatalf("status = %d, want %d; body=%s", response.Code, tt.want, response.Body.String())
+			}
+		})
+	}
 }
+
+type discussionRepositoryFake struct {
+	post                 model.Post
+	comment              model.Comment
+	reply                model.CommentOnComment
+	createPostUserID     int64
+	createCommentPostID  int64
+	createReplyCommentID int64
+	postFilter           database.PostFilter
+	commentPostID        int64
+	commentPagination    database.Pagination
+	replyCommentID       int64
+	reactionUserID       int64
+	reactionMessageID    int64
+	reactionMessageType  string
+	reactionType         model.ReactionType
+	notificationUserID   int64
+	notificationFilter   database.NotificationFilter
+	markedUserID         int64
+	listPostsCalls       int
+	err                  error
+}
+
+func (f *discussionRepositoryFake) GetPost(context.Context, int64) (model.Post, error) {
+	return f.post, f.err
+}
+func (f *discussionRepositoryFake) CreatePost(_ context.Context, userID int64, _ database.PostInput) (model.Post, error) {
+	f.createPostUserID = userID
+	return f.post, f.err
+}
+func (f *discussionRepositoryFake) UpdatePost(context.Context, int64, database.PostInput) (model.Post, error) {
+	return model.Post{}, f.err
+}
+func (f *discussionRepositoryFake) DeletePost(context.Context, int64) error { return f.err }
+func (f *discussionRepositoryFake) GetComment(context.Context, int64) (model.Comment, error) {
+	return f.comment, f.err
+}
+func (f *discussionRepositoryFake) CreateComment(_ context.Context, _ int64, postID int64, _ database.CommentInput) (model.Comment, error) {
+	f.createCommentPostID = postID
+	return f.comment, f.err
+}
+func (f *discussionRepositoryFake) UpdateComment(context.Context, int64, database.CommentInput) (model.Comment, error) {
+	return model.Comment{}, f.err
+}
+func (f *discussionRepositoryFake) DeleteComment(context.Context, int64) error { return f.err }
+func (f *discussionRepositoryFake) GetReply(context.Context, int64) (model.CommentOnComment, error) {
+	return f.reply, f.err
+}
+func (f *discussionRepositoryFake) CreateReply(_ context.Context, _ int64, commentID int64, _ database.CommentInput) (model.CommentOnComment, error) {
+	f.createReplyCommentID = commentID
+	return f.reply, f.err
+}
+func (f *discussionRepositoryFake) UpdateReply(context.Context, int64, database.CommentInput) (model.CommentOnComment, error) {
+	return model.CommentOnComment{}, f.err
+}
+func (f *discussionRepositoryFake) DeleteReply(context.Context, int64) error { return f.err }
 
 func (f *discussionRepositoryFake) ListPosts(_ context.Context, filter database.PostFilter) ([]model.Post, error) {
 	f.listPostsCalls++

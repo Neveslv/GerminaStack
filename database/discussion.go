@@ -12,6 +12,17 @@ import (
 )
 
 var ErrDiscussionNotFound = errors.New("discussion item not found")
+var ErrDiscussionInvalid = errors.New("invalid discussion item")
+
+type PostInput struct {
+	SubjectID        int64
+	Title            string
+	ImageURL         *string
+	ImageDescription *string
+	Content          string
+}
+
+type CommentInput struct{ Content string }
 
 type PostFilter struct {
 	SubjectID  *int64
@@ -28,6 +39,94 @@ type PostgresDiscussionRepository struct{ db *sql.DB }
 
 func NewPostgresDiscussionRepository(db *sql.DB) *PostgresDiscussionRepository {
 	return &PostgresDiscussionRepository{db: db}
+}
+
+func (r *PostgresDiscussionRepository) GetPost(ctx context.Context, postID int64) (model.Post, error) {
+	const query = `SELECT id, id_user, id_subject, title, image_url, image_description, content, likes, dislikes, created_at
+FROM posts WHERE id = $1`
+	var post model.Post
+	err := r.db.QueryRowContext(ctx, query, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CreatedAt)
+	return post, discussionReadError("get post", err)
+}
+
+func (r *PostgresDiscussionRepository) CreatePost(ctx context.Context, userID int64, input PostInput) (model.Post, error) {
+	var postID int64
+	err := r.db.QueryRowContext(ctx, `SELECT create_message($1, $2, $3, $4, $5, $6, $7)`, "post", userID, input.SubjectID, input.Content, input.Title, input.ImageURL, input.ImageDescription).Scan(&postID)
+	if err != nil {
+		return model.Post{}, discussionMutationError("create post", err)
+	}
+	return r.GetPost(ctx, postID)
+}
+
+func (r *PostgresDiscussionRepository) UpdatePost(ctx context.Context, postID int64, input PostInput) (model.Post, error) {
+	const query = `UPDATE posts SET id_subject = $1, title = $2, image_url = $3, image_description = $4, content = $5
+WHERE id = $6
+RETURNING id, id_user, id_subject, title, image_url, image_description, content, likes, dislikes, created_at`
+	var post model.Post
+	err := r.db.QueryRowContext(ctx, query, input.SubjectID, input.Title, input.ImageURL, input.ImageDescription, input.Content, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CreatedAt)
+	return post, discussionMutationReadError("update post", err)
+}
+
+func (r *PostgresDiscussionRepository) DeletePost(ctx context.Context, postID int64) error {
+	return deleteDiscussionItem(ctx, r.db, "DELETE FROM posts WHERE id = $1", postID, "delete post")
+}
+
+func (r *PostgresDiscussionRepository) GetComment(ctx context.Context, commentID int64) (model.Comment, error) {
+	const query = `SELECT id, id_post, id_user, content, likes, dislikes, created_at
+FROM comments WHERE id = $1`
+	var comment model.Comment
+	err := r.db.QueryRowContext(ctx, query, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.CreatedAt)
+	return comment, discussionReadError("get comment", err)
+}
+
+func (r *PostgresDiscussionRepository) CreateComment(ctx context.Context, userID, postID int64, input CommentInput) (model.Comment, error) {
+	var commentID int64
+	err := r.db.QueryRowContext(ctx, `SELECT create_message($1, $2, $3, $4, NULL, NULL, NULL)`, "comment", userID, postID, input.Content).Scan(&commentID)
+	if err != nil {
+		return model.Comment{}, discussionMutationError("create comment", err)
+	}
+	return r.GetComment(ctx, commentID)
+}
+
+func (r *PostgresDiscussionRepository) UpdateComment(ctx context.Context, commentID int64, input CommentInput) (model.Comment, error) {
+	const query = `UPDATE comments SET content = $1 WHERE id = $2
+RETURNING id, id_post, id_user, content, likes, dislikes, created_at`
+	var comment model.Comment
+	err := r.db.QueryRowContext(ctx, query, input.Content, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.CreatedAt)
+	return comment, discussionMutationReadError("update comment", err)
+}
+
+func (r *PostgresDiscussionRepository) DeleteComment(ctx context.Context, commentID int64) error {
+	return deleteDiscussionItem(ctx, r.db, "DELETE FROM comments WHERE id = $1", commentID, "delete comment")
+}
+
+func (r *PostgresDiscussionRepository) GetReply(ctx context.Context, replyID int64) (model.CommentOnComment, error) {
+	const query = `SELECT id, id_comment, id_user, content, likes, dislikes, created_at
+FROM comments_on_comments WHERE id = $1`
+	var reply model.CommentOnComment
+	err := r.db.QueryRowContext(ctx, query, replyID).Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.CreatedAt)
+	return reply, discussionReadError("get reply", err)
+}
+
+func (r *PostgresDiscussionRepository) CreateReply(ctx context.Context, userID, commentID int64, input CommentInput) (model.CommentOnComment, error) {
+	var replyID int64
+	err := r.db.QueryRowContext(ctx, `SELECT create_message($1, $2, $3, $4, NULL, NULL, NULL)`, "comment_on_comment", userID, commentID, input.Content).Scan(&replyID)
+	if err != nil {
+		return model.CommentOnComment{}, discussionMutationError("create reply", err)
+	}
+	return r.GetReply(ctx, replyID)
+}
+
+func (r *PostgresDiscussionRepository) UpdateReply(ctx context.Context, replyID int64, input CommentInput) (model.CommentOnComment, error) {
+	const query = `UPDATE comments_on_comments SET content = $1 WHERE id = $2
+RETURNING id, id_comment, id_user, content, likes, dislikes, created_at`
+	var reply model.CommentOnComment
+	err := r.db.QueryRowContext(ctx, query, input.Content, replyID).Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.CreatedAt)
+	return reply, discussionMutationReadError("update reply", err)
+}
+
+func (r *PostgresDiscussionRepository) DeleteReply(ctx context.Context, replyID int64) error {
+	return deleteDiscussionItem(ctx, r.db, "DELETE FROM comments_on_comments WHERE id = $1", replyID, "delete reply")
 }
 
 func (r *PostgresDiscussionRepository) ListPosts(ctx context.Context, filter PostFilter) ([]model.Post, error) {
@@ -161,13 +260,50 @@ func pageOffset(pagination Pagination) int64 {
 	return int64(pagination.Page-1) * int64(pagination.PageSize)
 }
 
+func discussionReadError(operation string, err error) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrDiscussionNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	return nil
+}
+
+func discussionMutationReadError(operation string, err error) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrDiscussionNotFound
+	}
+	return discussionMutationError(operation, err)
+}
+
+func deleteDiscussionItem(ctx context.Context, db *sql.DB, query string, id int64, operation string) error {
+	result, err := db.ExecContext(ctx, query, id)
+	if err != nil {
+		return discussionMutationError(operation, err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("%s result: %w", operation, err)
+	}
+	if affected == 0 {
+		return ErrDiscussionNotFound
+	}
+	return nil
+}
+
 func discussionMutationError(operation string, err error) error {
 	if err == nil {
 		return nil
 	}
 	var postgresError *pgconn.PgError
-	if errors.As(err, &postgresError) && (postgresError.Code == "23503" || postgresError.Code == "P0001") {
-		return ErrDiscussionNotFound
+	if errors.As(err, &postgresError) {
+		switch postgresError.Code {
+		case "23503", "P0001":
+			return ErrDiscussionNotFound
+		case "23514":
+			return ErrDiscussionInvalid
+		}
 	}
 	return fmt.Errorf("%s: %w", operation, err)
 }

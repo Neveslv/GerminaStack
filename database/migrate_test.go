@@ -107,6 +107,9 @@ func TestAcademicSeedMigrationUsesConflictSafeSeeds(t *testing.T) {
 	t.Parallel()
 
 	sql := readAcademicSeedMigration(t)
+	if got := strings.Count(sql, "INSERT INTO subjects (id_year, subject)"); got != 2 {
+		t.Fatalf("subject seed statement count = %d, want 2", got)
+	}
 	if got := strings.Count(sql, "INSERT INTO years (year) VALUES ('2') ON CONFLICT (year) DO NOTHING;"); got != 1 {
 		t.Fatalf("year 2 conflict-safe seed count = %d, want 1", got)
 	}

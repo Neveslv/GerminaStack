@@ -25,7 +25,13 @@ var (
 )
 
 type CredentialRepository interface {
-	FindByUsername(context.Context, string) (database.Credential, error)
+	FindByEmail(context.Context, string) (database.Credential, error)
+	FindByID(context.Context, int64) (database.Credential, error)
+}
+
+type Principal struct {
+	ID      int64
+	IsAdmin bool
 }
 
 type ChallengeRepository interface {
@@ -60,12 +66,12 @@ func NewService(credentials CredentialRepository, challenges ChallengeRepository
 	}
 }
 
-func (s *Service) StartLogin(ctx context.Context, username, password string) (string, error) {
-	if username == "" || password == "" || len(s.secret) == 0 {
+func (s *Service) StartLogin(ctx context.Context, email, password string) (string, error) {
+	if email == "" || password == "" || len(s.secret) == 0 {
 		return "", ErrInvalidCredentials
 	}
 
-	credential, err := s.credentials.FindByUsername(ctx, username)
+	credential, err := s.credentials.FindByEmail(ctx, email)
 	if errors.Is(err, database.ErrCredentialNotFound) {
 		_ = CheckPassword(dummyPasswordHash(), password)
 		return "", ErrInvalidCredentials
@@ -111,12 +117,12 @@ func (s *Service) StartLogin(ctx context.Context, username, password string) (st
 	return challengeID, nil
 }
 
-func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (int64, error) {
+func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (Principal, error) {
 	if !sixDigitCode.MatchString(code) {
-		return 0, ErrMalformedCode
+		return Principal{}, ErrMalformedCode
 	}
 	if challengeID == "" || len(challengeID) > 128 || len(s.secret) == 0 {
-		return 0, ErrInvalidCode
+		return Principal{}, ErrInvalidCode
 	}
 
 	userID, err := s.challenges.VerifyAndConsume(
@@ -127,17 +133,21 @@ func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (
 	)
 	switch {
 	case err == nil:
-		return userID, nil
+		credential, findErr := s.credentials.FindByID(ctx, userID)
+		if findErr != nil {
+			return Principal{}, ErrUnavailable
+		}
+		return Principal{ID: credential.ID, IsAdmin: credential.IsAdmin}, nil
 	case errors.Is(err, database.ErrInvalidCode), errors.Is(err, database.ErrChallengeNotFound):
-		return 0, ErrInvalidCode
+		return Principal{}, ErrInvalidCode
 	case errors.Is(err, database.ErrChallengeExpired):
-		return 0, ErrChallengeExpired
+		return Principal{}, ErrChallengeExpired
 	case errors.Is(err, database.ErrChallengeUsed):
-		return 0, ErrChallengeUsed
+		return Principal{}, ErrChallengeUsed
 	case errors.Is(err, database.ErrTooManyAttempts):
-		return 0, ErrTooManyAttempts
+		return Principal{}, ErrTooManyAttempts
 	default:
-		return 0, ErrUnavailable
+		return Principal{}, ErrUnavailable
 	}
 }
 

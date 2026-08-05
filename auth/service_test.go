@@ -22,8 +22,8 @@ func TestServiceStartLoginPersistsChallengeAndSendsEmail(t *testing.T) {
 	}
 	credentials := &credentialRepoFake{credential: database.Credential{
 		ID:           42,
-		Username:     "ana",
-		Email:        "ana@example.com",
+		Username:     "ana.silva",
+		Email:        "ana.silva@institutojef.org.br",
 		PasswordHash: passwordHash,
 	}}
 	challenges := newChallengeRepoFake()
@@ -31,7 +31,7 @@ func TestServiceStartLoginPersistsChallengeAndSendsEmail(t *testing.T) {
 	secret := []byte("two-factor-secret")
 	service := NewService(credentials, challenges, mailer, secret, fixedClock{now: now})
 
-	challengeID, err := service.StartLogin(context.Background(), "ana", "correct-password")
+	challengeID, err := service.StartLogin(context.Background(), "ana.silva@institutojef.org.br", "correct-password")
 	if err != nil {
 		t.Fatalf("StartLogin() error = %v", err)
 	}
@@ -59,6 +59,9 @@ func TestServiceStartLoginPersistsChallengeAndSendsEmail(t *testing.T) {
 	if !hmac.Equal(challenge.CodeHash, HashCode(secret, challengeID, code)) {
 		t.Fatal("persisted hash is not bound to the emailed code and challenge")
 	}
+	if credentials.requestedEmail != "ana.silva@institutojef.org.br" {
+		t.Fatalf("credential lookup email = %q", credentials.requestedEmail)
+	}
 }
 
 func TestServiceStartLoginDoesNotEnumerateCredentials(t *testing.T) {
@@ -77,15 +80,15 @@ func TestServiceStartLoginDoesNotEnumerateCredentials(t *testing.T) {
 		fixedClock{now: now},
 	)
 	wrong := NewService(
-		&credentialRepoFake{credential: database.Credential{ID: 42, Username: "ana", Email: "ana@example.com", PasswordHash: passwordHash}},
+		&credentialRepoFake{credential: database.Credential{ID: 42, Username: "ana.silva", Email: "ana.silva@institutojef.org.br", PasswordHash: passwordHash}},
 		newChallengeRepoFake(),
 		&mailSenderFake{},
 		[]byte("secret"),
 		fixedClock{now: now},
 	)
 
-	_, missingErr := missing.StartLogin(context.Background(), "nobody", "wrong-password")
-	_, wrongErr := wrong.StartLogin(context.Background(), "ana", "wrong-password")
+	_, missingErr := missing.StartLogin(context.Background(), "nobody.missing@institutojef.org.br", "wrong-password")
+	_, wrongErr := wrong.StartLogin(context.Background(), "ana.silva@institutojef.org.br", "wrong-password")
 	if !errors.Is(missingErr, ErrInvalidCredentials) || !errors.Is(wrongErr, ErrInvalidCredentials) {
 		t.Fatalf("errors = (%v, %v), want ErrInvalidCredentials", missingErr, wrongErr)
 	}
@@ -104,7 +107,7 @@ func TestServiceStartLoginInvalidatesChallengeWhenSMTPFails(t *testing.T) {
 	}
 	challenges := newChallengeRepoFake()
 	service := NewService(
-		&credentialRepoFake{credential: database.Credential{ID: 42, Username: "ana", Email: "ana@example.com", PasswordHash: passwordHash}},
+		&credentialRepoFake{credential: database.Credential{ID: 42, Username: "ana.silva", Email: "ana.silva@institutojef.org.br", PasswordHash: passwordHash}},
 		challenges,
 		&mailSenderFake{err: errors.New("SMTP unavailable with private detail")},
 		[]byte("secret"),
@@ -197,14 +200,46 @@ func TestServiceCompleteLoginReturnsUserForCorrectCode(t *testing.T) {
 		MaxAttempts: 5,
 		CreatedAt:   now,
 	}
-	service := NewService(&credentialRepoFake{}, challenges, &mailSenderFake{}, secret, fixedClock{now: now})
+	credentials := &credentialRepoFake{byIDCredential: database.Credential{ID: 42, IsAdmin: true}}
+	service := NewService(credentials, challenges, &mailSenderFake{}, secret, fixedClock{now: now})
 
-	userID, err := service.CompleteLogin(context.Background(), "challenge-id", "123456")
+	principal, err := service.CompleteLogin(context.Background(), "challenge-id", "123456")
 	if err != nil {
 		t.Fatalf("CompleteLogin() error = %v", err)
 	}
-	if userID != 42 {
-		t.Fatalf("CompleteLogin() userID = %d, want 42", userID)
+	if principal != (Principal{ID: 42, IsAdmin: true}) {
+		t.Fatalf("CompleteLogin() principal = %#v", principal)
+	}
+	if credentials.requestedID != 42 {
+		t.Fatalf("credential lookup user ID = %d, want 42", credentials.requestedID)
+	}
+}
+
+func TestServiceCompleteLoginMapsPrincipalLookupFailureToUnavailable(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 7, 30, 13, 4, 0, 0, time.UTC)
+	secret := []byte("secret")
+	challenges := newChallengeRepoFake()
+	challenges.items["challenge-id"] = database.Challenge{
+		ID:          "challenge-id",
+		UserID:      42,
+		CodeHash:    HashCode(secret, "challenge-id", "123456"),
+		ExpiresAt:   now.Add(time.Minute),
+		MaxAttempts: 5,
+		CreatedAt:   now,
+	}
+	service := NewService(
+		&credentialRepoFake{byIDErr: errors.New("database unavailable")},
+		challenges,
+		&mailSenderFake{},
+		secret,
+		fixedClock{now: now},
+	)
+
+	principal, err := service.CompleteLogin(context.Background(), "challenge-id", "123456")
+	if principal != (Principal{}) || !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("CompleteLogin() = (%#v, %v), want zero principal and ErrUnavailable", principal, err)
 	}
 }
 
@@ -220,7 +255,7 @@ func TestServiceCompleteLoginConcurrentConsumesOnlyOnce(t *testing.T) {
 		MaxAttempts: 5,
 		CreatedAt:   now,
 	}
-	service := NewService(&credentialRepoFake{}, challenges, &mailSenderFake{}, secret, fixedClock{now: now})
+	service := NewService(&credentialRepoFake{byIDCredential: database.Credential{ID: 42}}, challenges, &mailSenderFake{}, secret, fixedClock{now: now})
 
 	start := make(chan struct{})
 	results := make(chan error, 2)
@@ -260,12 +295,27 @@ func (c fixedClock) Now() time.Time {
 }
 
 type credentialRepoFake struct {
-	credential database.Credential
-	err        error
+	mu             sync.Mutex
+	credential     database.Credential
+	err            error
+	requestedEmail string
+	byIDCredential database.Credential
+	byIDErr        error
+	requestedID    int64
 }
 
-func (f *credentialRepoFake) FindByUsername(context.Context, string) (database.Credential, error) {
+func (f *credentialRepoFake) FindByEmail(_ context.Context, email string) (database.Credential, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.requestedEmail = email
 	return f.credential, f.err
+}
+
+func (f *credentialRepoFake) FindByID(_ context.Context, userID int64) (database.Credential, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.requestedID = userID
+	return f.byIDCredential, f.byIDErr
 }
 
 type mailSenderFake struct {

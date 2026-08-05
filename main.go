@@ -67,7 +67,8 @@ func run() error {
 	challenges := database.NewPostgresChallengeRepository(db)
 	authService := auth.NewService(credentials, challenges, mailer, []byte(cfg.TwoFactorSecret), systemClock{})
 	authHandler := handlers.NewAuthHandler(authService, cfg.JWTSecret, cfg.CookieSecure, tokenTTL, cfg.AuthOperationTimeout)
-	router := routes.NewRouter(authHandler)
+	userHandler := handlers.NewUserHandler(credentials, cfg.AuthOperationTimeout)
+	router := routes.NewRouter(authHandler, userHandler)
 
 	server := newHTTPServer(cfg.HTTPAddr, router, cfg.AuthOperationTimeout)
 	serverErrors := make(chan error, 1)

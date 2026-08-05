@@ -52,5 +52,9 @@ ON CONFLICT (id_year, subject) DO NOTHING;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_null_year_subject ON subjects (subject) WHERE id_year IS NULL;
 
 INSERT INTO subjects (id_year, subject)
-VALUES (NULL, 'Geral')
-ON CONFLICT (subject) WHERE id_year IS NULL DO NOTHING;
+SELECT NULL, 'Geral'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM subjects
+    WHERE id_year IS NULL AND subject = 'Geral'
+);

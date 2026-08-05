@@ -140,7 +140,7 @@ func readAcademicSeedMigration(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("read academic migration: %v", err)
 	}
-	return string(migration)
+	return strings.ReplaceAll(string(migration), "\r\n", "\n")
 }
 
 func TestMigrateReturnsDatabaseError(t *testing.T) {

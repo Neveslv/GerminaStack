@@ -16,7 +16,9 @@ func TestNewRouterRegistersIssueTenAPIRoutes(t *testing.T) {
 
 	authHandler := handlers.NewAuthHandler(routerAuthServiceFake{}, "jwt-test-secret", true, 24*time.Hour, 2*time.Second)
 	userHandler := handlers.NewUserHandler(routerUserRepositoryFake{}, 2*time.Second)
-	router := NewRouter(authHandler, userHandler)
+	catalogHandler := handlers.NewCatalogHandler(&routeCatalogRepositoryFake{}, 2*time.Second)
+	discussionHandler := handlers.NewDiscussionHandler(&routeDiscussionRepositoryFake{}, 2*time.Second)
+	router := NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, "jwt-test-secret")
 
 	got := make(map[string]bool)
 	for _, route := range router.Routes() {
@@ -31,9 +33,6 @@ func TestNewRouterRegistersIssueTenAPIRoutes(t *testing.T) {
 		if !got[want] {
 			t.Fatalf("route %q is not registered; got %#v", want, got)
 		}
-	}
-	if len(got) != 4 {
-		t.Fatalf("registered routes = %#v, want exactly four issue #10 routes", got)
 	}
 }
 

@@ -260,6 +260,10 @@ html {
 
 body {
   margin: 0;
+  /* Numa tela curta (login, cadastro, estado de erro) o body fica menor que a
+     janela e as camadas do fundo terminam antes da borda de baixo. */
+  min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top right, rgba(255, 179, 71, 0.16), transparent 28%),
     radial-gradient(circle at top left, rgba(32, 99, 212, 0.12), transparent 34%),
@@ -285,6 +289,23 @@ select {
 button {
   border: 0;
   cursor: pointer;
+}
+
+/* Link de conteudo. O kit nao tinha nenhuma regra base para <a>, entao um link
+   escrito no corpo do texto caia no azul padrao do navegador (#0000ee), que
+   nao pertence a nenhuma paleta daqui e nao acompanha tema nenhum.
+   O seletor exclui os que ja tem classe: .gs-btn, .gs-nav-link, .gs-chip,
+   .gs-action e afins trazem a propria aparencia e nao devem ser tocados.
+   O sublinhado nao e enfeite: e o indicador nao-cromatico que o link precisa
+   ter para nao se distinguir do texto so pela cor (WCAG 1.4.1). */
+a:not([class]) {
+  color: var(--gs-navy);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+a:not([class]):hover {
+  color: var(--gs-orange-pressed);
 }
 
 a,
@@ -801,6 +822,22 @@ select:focus-visible,
 .gs-pricing-card,
 .gs-empty-state {
   padding: 20px;
+}
+
+/* <fieldset class="gs-card"> e um uso legitimo: um grupo de radios (escolha de
+   tema, por exemplo) precisa de <fieldset>/<legend> para o leitor de tela
+   anunciar o nome do grupo. Mas a <legend> e posicionada na borda de cima do
+   fieldset e ignora o padding do card, entao o titulo encosta na borda e
+   parece transbordar. O float devolve a legend ao fluxo normal, ja dentro do
+   padding, sem custo nenhum de acessibilidade. */
+fieldset.gs-card > legend {
+  float: left;
+  width: 100%;
+  padding: 0;
+}
+
+fieldset.gs-card > legend + * {
+  clear: both;
 }
 
 .gs-card:hover,
@@ -1715,6 +1752,16 @@ kbd {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 24px;
+}
+
+/* A coluna principal quase sempre comeca por algo curto (um rotulo de campo,
+   um titulo de secao) e a lateral por um card inteiro. Alinhados no topo exato
+   da grade, o card lateral parece subir demais em relacao ao conteudo. O
+   respiro vale so no layout de duas colunas: empilhado, quem separa e o gap. */
+@media (min-width: 1101px) {
+  .gs-layout-demo > aside {
+    margin-top: 26px;
+  }
 }
 
 .gs-showcase-grid {

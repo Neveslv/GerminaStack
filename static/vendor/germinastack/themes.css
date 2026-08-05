@@ -473,9 +473,83 @@ body {
     --gs-shadow-glow: none;
 }
 
+/**
+ * Reconciliação com a camada de aparência do kit (07-theme.css).
+ *
+ * Aquela camada desenha um produto claro: topo branco, links do topo em
+ * --gs-slate, hero sem fundo e sem recuo lateral. Este arquivo repinta topo e
+ * hero de escuro (--gsk-topo-* / --gsk-hero-*), então as cores de texto de lá
+ * passam a cair sobre um fundo escuro e o par fundo/texto se desfaz.
+ *
+ * Cada bloco abaixo devolve o texto ao contexto em que ele é lido, sempre por
+ * variável do tema — nada de cor fixa, senão os temas de contraste (que têm
+ * topo claro, como yellow_black) quebrariam do outro lado.
+ */
+
+/* Links do topo herdavam --gs-slate (cinza pensado para topo claro) sobre o
+   topo escuro: ~2:1, abaixo de qualquer critério. Passam a usar a própria cor
+   de texto do topo, clara ou escura conforme o tema. */
+.gs-topbar .gs-nav-link {
+    color: var(--gsk-topo-texto);
+    opacity: 0.78;
+}
+
+.gs-topbar .gs-nav-link:hover,
+.gs-topbar .gs-nav-link:focus-visible,
+.gs-topbar .gs-nav-link.is-active,
+.gs-topbar .gs-nav-link[aria-current="page"] {
+    color: var(--gsk-topo-texto);
+    opacity: 1;
+}
+
+/* Painel flutuante ancorado no topo (menu "⋮", popover de notificações): tem
+   fundo próprio e claro, mas herdava a cor de texto do topo — branco sobre
+   branco, ~1:1. É o pior contraste da interface hoje. */
+.gs-topbar .gs-menu-panel {
+    color: var(--gs-ink);
+}
+
+/* O hero volta a ser superfície pintada aqui, então precisa do recuo que a
+   camada de aparência tinha zerado (lá ele é transparente e o texto podia
+   encostar na borda sem parecer errado). */
+.gs-hero {
+    padding-inline: 32px;
+    border-block: 0;
+    border-radius: var(--gs-radius-lg);
+}
+
+/* Texto de apoio do hero: vinha de --gs-slate/--gs-ink, ambos escolhidos para
+   fundo claro, e sumia sobre o hero escuro. */
+.gs-hero p,
+.gs-hero-stats span {
+    color: inherit;
+    opacity: 0.88;
+}
+
+.gs-hero-stats strong {
+    color: inherit;
+}
+
 /* =========================================================
    7. font_family
    ========================================================= */
+
+/**
+ * A camada de aparência do kit fixa serifa nos títulos (.gs-hero h1,
+ * .gs-card-title, .gs-side-title...). Isso anula a escolha de font_family
+ * justamente nas palavras de maior destaque: quem seleciona OpenDyslexic ou
+ * Lexend continuaria lendo todo título em Georgia. Como consequência, também
+ * some a troca de fonte no meio da tela (título serifado, corpo sem serifa)
+ * que o mesmo bloco causava no tema padrão.
+ */
+.gs-hero h1,
+.gs-section-head h2,
+.gs-card-title,
+.gs-side-title,
+.gs-modal-head h3,
+.gs-pricing-price strong {
+    font-family: inherit;
+}
 
 /**
  * Lexend, Atkinson Hyperlegible e OpenDyslexic são fontes desenhadas para

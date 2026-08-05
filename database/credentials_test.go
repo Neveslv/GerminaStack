@@ -4,12 +4,25 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"reflect"
 	"regexp"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/jackc/pgx/v5/pgconn"
 )
+
+func TestUserRegistrationYearIDIsRequired(t *testing.T) {
+	t.Parallel()
+
+	registrationYearID, found := reflect.TypeOf(UserRegistration{}).FieldByName("YearID")
+	if !found {
+		t.Fatal("UserRegistration.YearID field not found")
+	}
+	if got, want := registrationYearID.Type, reflect.TypeOf(int64(0)); got != want {
+		t.Fatalf("UserRegistration.YearID type = %s, want %s", got, want)
+	}
+}
 
 const credentialQuery = `SELECT id, username, email, password, is_admin
 FROM users

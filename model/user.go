@@ -7,7 +7,7 @@ import (
 
 type User struct {
 	ID                      int64      `db:"id" json:"id"`
-	YearID                  int64      `db:"id_year" json:"id_year"`
+	YearID                  *int64     `db:"id_year" json:"id_year"`
 	Name                    string     `db:"name" json:"name"`
 	ProfileImageURL         *string    `db:"profile_image_url" json:"profile_image_url"`
 	ProfileImageDescription *string    `db:"profile_image_description" json:"profile_image_description"`

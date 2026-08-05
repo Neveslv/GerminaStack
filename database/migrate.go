@@ -19,6 +19,9 @@ var twoFactorChallengesMigration string
 //go:embed migrations/0004_admin_year_and_academic_seed.sql
 var adminYearAndAcademicSeedMigration string
 
+//go:embed migrations/0005_message_functions_triggers.sql
+var messageFunctionsTriggersMigration string
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := db.ExecContext(ctx, coreSchemaMigration); err != nil {
 		return fmt.Errorf("apply core schema migration: %w", err)
@@ -31,6 +34,9 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 	if _, err := db.ExecContext(ctx, adminYearAndAcademicSeedMigration); err != nil {
 		return fmt.Errorf("apply admin year and academic seed migration: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, messageFunctionsTriggersMigration); err != nil {
+		return fmt.Errorf("apply message functions and triggers migration: %w", err)
 	}
 	return nil
 }

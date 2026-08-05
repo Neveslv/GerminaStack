@@ -10,7 +10,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-func TestMigrateExecutesAcademicMigrationAfterExistingMigrations(t *testing.T) {
+func TestMigrateExecutesMessageFunctionsMigrationAfterAcademicMigration(t *testing.T) {
 	t.Parallel()
 
 	db, mock, err := sqlmock.New()
@@ -41,7 +41,14 @@ func TestMigrateExecutesAcademicMigrationAfterExistingMigrations(t *testing.T) {
 	mock.ExpectExec(corePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(upgradePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(twoFactorPattern).WillReturnResult(sqlmock.NewResult(0, 0))
+	messageFunctionsPattern := "(?s)" +
+		regexp.QuoteMeta("CREATE OR REPLACE FUNCTION create_message(") + ".*" +
+		regexp.QuoteMeta("CREATE OR REPLACE FUNCTION reaction(") + ".*" +
+		regexp.QuoteMeta("CREATE OR REPLACE FUNCTION mark_notifications_as_read(") + ".*" +
+		regexp.QuoteMeta("CREATE TRIGGER trg_notify_mentions_comment_on_comment")
 	mock.ExpectExec(academicSeedPattern).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec(messageFunctionsPattern).WillReturnResult(sqlmock.NewResult(0, 0))
+
 
 	if err := Migrate(context.Background(), db); err != nil {
 		t.Fatalf("Migrate() error = %v", err)

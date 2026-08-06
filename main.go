@@ -14,6 +14,7 @@ import (
 	"germinaStack/config"
 	"germinaStack/database"
 	"germinaStack/handlers"
+	"germinaStack/middleware"
 	"germinaStack/routes"
 )
 
@@ -68,7 +69,17 @@ func run() error {
 	authService := auth.NewService(credentials, challenges, mailer, []byte(cfg.TwoFactorSecret), systemClock{})
 	authHandler := handlers.NewAuthHandler(authService, cfg.JWTSecret, cfg.CookieSecure, tokenTTL, cfg.AuthOperationTimeout)
 	userHandler := handlers.NewUserHandler(credentials, cfg.AuthOperationTimeout)
-	router := routes.NewRouter(authHandler, userHandler)
+	catalogHandler := handlers.NewCatalogHandler(database.NewPostgresCatalogRepository(db), cfg.AuthOperationTimeout)
+	messageHandler := handlers.NewMessageHandler(database.NewPostgresMessageRepository(db), cfg.AuthOperationTimeout)
+	reactionHandler := handlers.NewReactionHandler(database.NewPostgresReactionRepository(db), cfg.AuthOperationTimeout)
+	notificationHandler := handlers.NewNotificationHandler(database.NewPostgresNotificationRepository(db), cfg.AuthOperationTimeout)
+	router := routes.NewRouter(authHandler, userHandler, routes.RouterDependencies{
+		Catalog:       catalogHandler,
+		Messages:      messageHandler,
+		Reactions:     reactionHandler,
+		Notifications: notificationHandler,
+		Authenticated: middleware.APIAuthMiddleware(cfg.JWTSecret),
+	})
 
 	server := newHTTPServer(cfg.HTTPAddr, router, cfg.AuthOperationTimeout)
 	serverErrors := make(chan error, 1)

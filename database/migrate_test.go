@@ -8,7 +8,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 )
 
-func TestMigrateExecutesCoreSchemaBeforeTwoFactorChallengeSchema(t *testing.T) {
+func TestMigrateExecutesFiveStagesInOrderOnEveryRun(t *testing.T) {
 	t.Parallel()
 
 	db, mock, err := sqlmock.New()
@@ -35,9 +35,13 @@ func TestMigrateExecutesCoreSchemaBeforeTwoFactorChallengeSchema(t *testing.T) {
 	mock.ExpectExec(corePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(upgradePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(twoFactorPattern).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("(?s)INSERT INTO years").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("(?s)CREATE OR REPLACE FUNCTION create_message").WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(corePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(upgradePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(twoFactorPattern).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("(?s)INSERT INTO years").WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectExec("(?s)CREATE OR REPLACE FUNCTION create_message").WillReturnResult(sqlmock.NewResult(0, 0))
 
 	if err := Migrate(context.Background(), db); err != nil {
 		t.Fatalf("Migrate() error = %v", err)

@@ -67,7 +67,7 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 			model: User{},
 			fields: []fieldContract{
 				contractField("ID", int64(0), "id", "id"),
-				contractField("YearID", int64(0), "id_year", "id_year"),
+				contractField("YearID", (*int64)(nil), "id_year", "id_year"),
 				contractField("Name", "", "name", "name"),
 				contractField(
 					"ProfileImageURL",

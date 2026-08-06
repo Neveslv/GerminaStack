@@ -74,3 +74,11 @@ func TestMigrateReturnsDatabaseError(t *testing.T) {
 		t.Fatal("Migrate() error = nil, want non-nil")
 	}
 }
+
+func TestNotifyMentionsPatternMatchesDottedUsername(t *testing.T) {
+	pattern := regexp.MustCompile(`@([A-Za-z0-9_]+([.][A-Za-z0-9_]+)*)`)
+	match := pattern.FindStringSubmatch("@ana.silva, veja isso.")
+	if len(match) < 2 || match[1] != "ana.silva" {
+		t.Fatalf("mention match = %#v, want ana.silva", match)
+	}
+}

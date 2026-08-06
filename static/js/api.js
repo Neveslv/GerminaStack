@@ -297,10 +297,12 @@ export async function reagir({ tipo, id, reacao }) {
     });
     const atual = anterior === reacao ? null : reacao;
     reacoesDaSessao.set(chave, atual);
+	const atualizado = await requisitar(`/api/${recurso}/${id}`);
     return {
         reacao: atual,
-        likes: (atual === 'like' ? 1 : 0) - (anterior === 'like' ? 1 : 0),
-        dislikes: (atual === 'dislike' ? 1 : 0) - (anterior === 'dislike' ? 1 : 0)
+		likes: atualizado.likes,
+		dislikes: atualizado.dislikes,
+		absolutos: true
     };
 }
 

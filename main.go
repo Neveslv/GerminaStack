@@ -50,7 +50,7 @@ func run() error {
 
 	db, err := database.Open(rootContext, cfg.DatabaseURL, database.DefaultPoolConfig())
 	if err != nil {
-		return errors.New("database initialization failed")
+		return fmt.Errorf("database initialization failed: %w", err)
 	}
 	defer db.Close()
 

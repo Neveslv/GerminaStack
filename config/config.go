@@ -21,6 +21,9 @@ type Config struct {
 	HTTPAddr             string
 	AuthOperationTimeout time.Duration
 	SMTP                 auth.SMTPConfig
+	GoogleClientID       string
+	GoogleClientSecret   string
+	GoogleRefreshToken   string
 }
 
 func Load() (Config, error) {
@@ -110,6 +113,9 @@ func Load() (Config, error) {
 		HTTPAddr:             httpAddr,
 		AuthOperationTimeout: authOperationTimeout,
 		SMTP:                 smtpConfig,
+		GoogleClientID:       strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret:   strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		GoogleRefreshToken:   strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
 	}, nil
 }
 

@@ -22,7 +22,7 @@ BEGIN
     SELECT post_id, mentioned.id,
            author.username || ' mencionou você no post "' || post_title || '"'
     FROM (
-        SELECT DISTINCT (regexp_matches(NEW.content, '@([A-Za-z0-9_]+)', 'g'))[1] AS username
+        SELECT DISTINCT (regexp_matches(NEW.content, '@([A-Za-z0-9_]+([.][A-Za-z0-9_]+)*)', 'g'))[1] AS username
     ) AS mentions
     JOIN users AS mentioned ON mentioned.username = mentions.username
     JOIN users AS author ON author.id = NEW.id_user

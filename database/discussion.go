@@ -43,10 +43,10 @@ func NewPostgresDiscussionRepository(db *sql.DB) *PostgresDiscussionRepository {
 
 func (r *PostgresDiscussionRepository) GetPost(ctx context.Context, postID int64) (model.Post, error) {
 	const query = `SELECT p.id, p.id_user, p.id_subject, p.title, p.image_url, p.image_description, p.content, p.likes, p.dislikes,
-       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), p.created_at
-FROM posts p WHERE p.id = $1`
+	       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), u.name, u.username, p.created_at
+FROM posts p JOIN users u ON u.id = p.id_user WHERE p.id = $1`
 	var post model.Post
-	err := r.db.QueryRowContext(ctx, query, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CommentsCount, &post.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CommentsCount, &post.AuthorName, &post.AuthorUsername, &post.CreatedAt)
 	return post, discussionReadError("get post", err)
 }
 
@@ -135,8 +135,8 @@ func (r *PostgresDiscussionRepository) DeleteReply(ctx context.Context, replyID 
 
 func (r *PostgresDiscussionRepository) ListPosts(ctx context.Context, filter PostFilter) ([]model.Post, error) {
 	query := `SELECT p.id, p.id_user, p.id_subject, p.title, p.image_url, p.image_description, p.content, p.likes, p.dislikes,
-       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), p.created_at
-FROM posts p`
+	       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), u.name, u.username, p.created_at
+FROM posts p JOIN users u ON u.id = p.id_user`
 	args := make([]any, 0, 4)
 	switch {
 	case filter.SubjectID != nil && filter.AuthorID != nil:
@@ -160,7 +160,7 @@ FROM posts p`
 	posts := make([]model.Post, 0)
 	for rows.Next() {
 		var post model.Post
-		if err := rows.Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CommentsCount, &post.CreatedAt); err != nil {
+		if err := rows.Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CommentsCount, &post.AuthorName, &post.AuthorUsername, &post.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan post: %w", err)
 		}
 		posts = append(posts, post)

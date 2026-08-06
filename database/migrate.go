@@ -22,6 +22,9 @@ var academicSeedMigration string
 //go:embed migrations/0006_users_admin.sql
 var usersAdminMigration string
 
+//go:embed migrations/0007_notify_mentions.sql
+var notifyMentionsMigration string
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := db.ExecContext(ctx, coreSchemaMigration); err != nil {
 		return fmt.Errorf("apply core schema migration: %w", err)
@@ -37,6 +40,9 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 	if _, err := db.ExecContext(ctx, academicSeedMigration); err != nil {
 		return fmt.Errorf("apply academic seed migration: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, notifyMentionsMigration); err != nil {
+		return fmt.Errorf("apply notifications migration: %w", err)
 	}
 	return nil
 }

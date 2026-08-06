@@ -36,18 +36,26 @@
         <div style="max-width: 26rem; margin: 0 auto;">
             <div class="gs-section-head">
                 <h1>Entrar</h1>
-                <p>Use o mesmo usuário do sistema da escola.</p>
+                <p>Use seu e-mail institucional. Você receberá um código de confirmação.</p>
             </div>
 
             <div id="estado-login" role="status" aria-live="polite" hidden></div>
 
             <div class="gs-card">
                 <form class="gs-stack" id="form-login" novalidate>
-                    <label class="gs-form-group" for="usuario">
-                        <span class="gs-label">Usuário</span>
-                        <input class="gs-input" type="text" id="usuario" name="usuario" required autocomplete="username"
-                            aria-describedby="erro-usuario" />
-                        <span class="gs-form-error" id="erro-usuario" role="alert"></span>
+                    <label class="gs-form-group" for="email">
+                        <span class="gs-label">E-mail institucional</span>
+                        <input class="gs-input" type="email" id="email" name="email" required autocomplete="username"
+                            aria-describedby="erro-email" />
+                        <span class="gs-form-error" id="erro-email" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" id="grupo-codigo" for="codigo" hidden>
+                        <span class="gs-label">Código de confirmação</span>
+                        <input class="gs-input" type="text" id="codigo" name="codigo" inputmode="numeric"
+                            autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
+                            aria-describedby="erro-codigo" />
+                        <span class="gs-form-error" id="erro-codigo" role="alert"></span>
                     </label>
 
                     <label class="gs-form-group" for="senha">

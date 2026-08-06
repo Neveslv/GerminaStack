@@ -6,8 +6,7 @@
  * que apontam os links de autor no feed e nos comentários.
  */
 
-import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao } from '../api.js';
-import { USUARIO_ATUAL } from '../mock/sessao.js';
+import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, sair } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
 import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
@@ -20,7 +19,7 @@ const estadoPerfil = criarPainelDeEstado(document.querySelector('#estado-perfil'
 const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
 
 const usuarioDaUrl = new URLSearchParams(window.location.search).get('usuario');
-const ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === USUARIO_ATUAL.username;
+let ehMeuPerfil = !usuarioDaUrl;
 
 function montarCartao(usuario) {
     cartao.replaceChildren();
@@ -78,6 +77,25 @@ function montarCartao(usuario) {
 
     if (ehMeuPerfil) {
         const acoes = criarElemento('div', { classe: 'gs-cluster' });
+        const botaoSair = criarElemento('button', {
+            classe: 'gs-btn gs-btn-ghost',
+            texto: 'Sair',
+            atributos: { type: 'button' }
+        });
+        botaoSair.addEventListener('click', async () => {
+            botaoSair.disabled = true;
+            try {
+                await sair();
+                window.location.assign('/login');
+            } catch (erro) {
+                botaoSair.disabled = false;
+                window.GerminaStackUI?.showToast({
+                    title: 'Não foi possível sair',
+                    message: erro.message,
+                    tone: 'danger'
+                });
+            }
+        });
         acoes.append(
             criarElemento('a', {
                 classe: 'gs-btn gs-btn-secondary',
@@ -88,7 +106,8 @@ function montarCartao(usuario) {
                 classe: 'gs-btn gs-btn-primary',
                 texto: 'Nova publicação',
                 atributos: { href: '/publicar' }
-            })
+            }),
+            botaoSair
         );
         cartao.append(acoes);
     }
@@ -150,7 +169,8 @@ async function carregarPagina() {
     estadoPublicacoes.carregando('Carregando publicações…');
 
     try {
-        const usuario = await buscarUsuario(usuarioDaUrl ?? USUARIO_ATUAL.username);
+        const usuario = await buscarUsuario(usuarioDaUrl);
+        ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === usuario.username;
 
         document.title = `${usuario.name} | GerminaStack`;
         montarCartao(usuario);

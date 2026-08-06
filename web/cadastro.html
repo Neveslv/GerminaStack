@@ -36,33 +36,15 @@
         <div style="max-width: 30rem; margin: 0 auto;">
             <div class="gs-section-head">
                 <h1>Criar conta</h1>
-                <p>Preencha os dados abaixo. Todos os campos são obrigatórios.</p>
+                <p>Seu nome e usuário serão criados a partir do e-mail institucional.</p>
             </div>
 
             <div id="estado-cadastro" role="status" aria-live="polite" hidden></div>
 
             <div class="gs-card">
                 <form class="gs-stack" id="form-cadastro" novalidate>
-                    <label class="gs-form-group" for="nome">
-                        <span class="gs-label">Nome completo</span>
-                        <input class="gs-input" type="text" id="nome" name="nome" required autocomplete="name"
-                            maxlength="120" aria-describedby="erro-nome" />
-                        <span class="gs-form-error" id="erro-nome" role="alert"></span>
-                    </label>
-
-                    <label class="gs-form-group" for="usuario">
-                        <span class="gs-label">Usuário</span>
-                        <input class="gs-input" type="text" id="usuario" name="usuario" required autocomplete="username"
-                            maxlength="40" aria-describedby="dica-usuario erro-usuario" />
-                        <span class="gs-form-hint" id="dica-usuario">
-                            É o nome que os colegas usam para te marcar com @. Só letras, números, ponto e traço
-                            baixo.
-                        </span>
-                        <span class="gs-form-error" id="erro-usuario" role="alert"></span>
-                    </label>
-
                     <label class="gs-form-group" for="email">
-                        <span class="gs-label">E-mail</span>
+                        <span class="gs-label">E-mail institucional</span>
                         <input class="gs-input" type="email" id="email" name="email" required autocomplete="email"
                             aria-describedby="erro-email" />
                         <span class="gs-form-error" id="erro-email" role="alert"></span>

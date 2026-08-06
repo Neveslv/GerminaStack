@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Acessibilidade | GerminaStack</title>
+    <meta name="description"
+        content="Escolha o contraste, a fonte, o espacamento e o tamanho que voce enxerga melhor no GerminaStack." />
+
+    <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
+    <link rel="stylesheet" href="/static/vendor/germinastack/themes.css" />
+    <link rel="stylesheet" href="/static/vendor/germinastack/notifications.css" />
+
+    <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
+    <script src="/static/js/tema-inicial.js"></script>
+
+    <script src="/static/vendor/germinastack/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/componentes/cabecalho.js"></script>
+    <script type="module" src="/static/js/pages/preferencias.js"></script>
+</head>
+
+<body>
+    <a class="gs-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+    <header class="gs-topbar">
+        <a class="gs-brand" href="/">
+            <span class="gs-brand-mark" aria-hidden="true">GS</span>
+            <span>GerminaStack</span>
+        </a>
+
+        <nav class="gs-nav" aria-label="Navegação principal">
+            <a class="gs-nav-link" href="/">Feed</a>
+            <a class="gs-nav-link" href="/materias">Matérias</a>
+            <a class="gs-nav-link" href="/publicar">Publicar</a>
+            <div class="gs-menu" data-gs-menu>
+                <button class="gs-nav-link" type="button" data-gs-menu-trigger aria-haspopup="menu"
+                    aria-expanded="false">
+                    Notificações
+                    <span class="gs-badge" data-nao-lidas hidden></span>
+                </button>
+                <div class="gs-menu-panel gs-notif-panel" data-gs-menu-panel hidden>
+                    <div class="gs-notif-head">
+                        <strong>Notificações</strong>
+                        <button class="gs-btn gs-btn-ghost" type="button" data-notif-marcar-lidas disabled>
+                            Marcar todas como lidas
+                        </button>
+                    </div>
+                    <div class="gs-notif-lista" data-notif-lista></div>
+                </div>
+            </div>
+            <a class="gs-nav-link is-active" href="/preferencias" aria-current="page">Acessibilidade</a>
+            <a class="gs-nav-link" href="/perfil">Perfil</a>
+        </nav>
+    </header>
+
+    <main class="gs-page" id="conteudo-principal">
+        <div class="gs-stack" style="max-width: 46rem; margin: 0 auto;">
+            <div class="gs-section-head">
+                <h1>Acessibilidade</h1>
+                <p>
+                    Escolha o contraste, a fonte, o espaçamento e o tamanho com que você lê com menos esforço.
+                    A mudança vale para todas as páginas e fica salva na sua conta.
+                </p>
+            </div>
+
+            <div id="estado-preferencias" role="status" aria-live="polite" hidden></div>
+
+            <form id="form-preferencias">
+                <div class="gs-stack">
+                    <!--
+                        Radios de verdade, e não botões com aria-*: o leitor de tela
+                        anuncia "opção 2 de 5" sozinho e as setas do teclado já
+                        navegam pelo grupo sem uma linha de JavaScript.
+                    -->
+                    <fieldset class="gs-card" style="border: 0;">
+                        <legend class="gs-side-title">Contraste</legend>
+                        <p class="gs-card-subtitle" id="dica-contraste">
+                            A tela muda na hora para você comparar antes de salvar.
+                        </p>
+
+                        <div class="gs-stack" role="radiogroup" aria-describedby="dica-contraste">
+                            <label class="gs-list-row" for="tema-normal">
+                                <span>
+                                    <strong>Padrão</strong>
+                                    <span class="gs-form-hint">Fundo claro com o azul e o laranja da identidade.</span>
+                                </span>
+                                <input type="radio" id="tema-normal" name="contrast_theme" value="normal" />
+                            </label>
+
+                            <label class="gs-list-row" for="tema-dark">
+                                <span>
+                                    <strong>Escuro</strong>
+                                    <span class="gs-form-hint">Fundo escuro, útil à noite e para quem tem
+                                        fotofobia.</span>
+                                </span>
+                                <input type="radio" id="tema-dark" name="contrast_theme" value="dark" />
+                            </label>
+
+                            <label class="gs-list-row" for="tema-high-contrast">
+                                <span>
+                                    <strong>Alto contraste</strong>
+                                    <span class="gs-form-hint">Preto sobre branco, com bordas reforçadas.</span>
+                                </span>
+                                <input type="radio" id="tema-high-contrast" name="contrast_theme"
+                                    value="high_contrast" />
+                            </label>
+
+                            <label class="gs-list-row" for="tema-black-yellow">
+                                <span>
+                                    <strong>Preto e amarelo</strong>
+                                    <span class="gs-form-hint">Fundo preto com texto amarelo. Contraste máximo.</span>
+                                </span>
+                                <input type="radio" id="tema-black-yellow" name="contrast_theme"
+                                    value="black_yellow" />
+                            </label>
+
+                            <label class="gs-list-row" for="tema-yellow-black">
+                                <span>
+                                    <strong>Amarelo e preto</strong>
+                                    <span class="gs-form-hint">Fundo amarelo com texto preto. Contraste máximo.</span>
+                                </span>
+                                <input type="radio" id="tema-yellow-black" name="contrast_theme"
+                                    value="yellow_black" />
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="gs-card" style="border: 0;">
+                        <legend class="gs-side-title">Fonte</legend>
+                        <p class="gs-card-subtitle" id="dica-fonte">
+                            Lexend, Atkinson Hyperlegible e OpenDyslexic foram desenhadas para leitura com baixa visão
+                            ou dislexia.
+                        </p>
+
+                        <div class="gs-stack" role="radiogroup" aria-describedby="dica-fonte">
+                            <label class="gs-list-row" for="fonte-normal">
+                                <span>
+                                    <strong>Padrão do sistema</strong>
+                                    <span class="gs-form-hint">A fonte que o kit já usa.</span>
+                                </span>
+                                <input type="radio" id="fonte-normal" name="font_family" value="normal" />
+                            </label>
+
+                            <label class="gs-list-row" for="fonte-arial">
+                                <span>
+                                    <strong style="font-family: Arial, Helvetica, sans-serif;">Arial</strong>
+                                    <span class="gs-form-hint">Sem serifa, presente em qualquer computador.</span>
+                                </span>
+                                <input type="radio" id="fonte-arial" name="font_family" value="arial" />
+                            </label>
+
+                            <label class="gs-list-row" for="fonte-verdana">
+                                <span>
+                                    <strong style="font-family: Verdana, Geneva, sans-serif;">Verdana</strong>
+                                    <span class="gs-form-hint">Letras mais largas e mais espaçadas.</span>
+                                </span>
+                                <input type="radio" id="fonte-verdana" name="font_family" value="verdana" />
+                            </label>
+
+                            <label class="gs-list-row" for="fonte-lexend">
+                                <span>
+                                    <strong style="font-family: 'Lexend', 'Trebuchet MS', sans-serif;">Lexend</strong>
+                                    <span class="gs-form-hint">Desenhada para reduzir o esforço de leitura.</span>
+                                </span>
+                                <input type="radio" id="fonte-lexend" name="font_family" value="lexend" />
+                            </label>
+
+                            <label class="gs-list-row" for="fonte-atkinson">
+                                <span>
+                                    <strong style="font-family: 'Atkinson Hyperlegible', Verdana, sans-serif;">Atkinson
+                                        Hyperlegible</strong>
+                                    <span class="gs-form-hint">Criada para baixa visão: diferencia letras
+                                        parecidas.</span>
+                                </span>
+                                <input type="radio" id="fonte-atkinson" name="font_family"
+                                    value="atkinson_hyperlegible" />
+                            </label>
+
+                            <label class="gs-list-row" for="fonte-dyslexic">
+                                <span>
+                                    <strong
+                                        style="font-family: 'OpenDyslexic', 'Comic Sans MS', sans-serif; font-weight: 400;">OpenDyslexic</strong>
+                                    <span class="gs-form-hint">Base pesada nas letras, pensada para dislexia.</span>
+                                </span>
+                                <input type="radio" id="fonte-dyslexic" name="font_family" value="open_dyslexic" />
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="gs-card" style="border: 0;">
+                        <legend class="gs-side-title">Espaçamento</legend>
+                        <p class="gs-card-subtitle" id="dica-espacamento">
+                            Espaço entre letras e palavras, independente da fonte escolhida.
+                        </p>
+
+                        <div class="gs-stack" role="radiogroup" aria-describedby="dica-espacamento">
+                            <label class="gs-list-row" for="espacamento-normal">
+                                <span>
+                                    <strong>Padrão</strong>
+                                    <span class="gs-form-hint">O espaçamento que a fonte já usa.</span>
+                                </span>
+                                <input type="radio" id="espacamento-normal" name="font_spacing" value="normal" />
+                            </label>
+
+                            <label class="gs-list-row" for="espacamento-pequeno">
+                                <span>
+                                    <strong>Pequeno</strong>
+                                    <span class="gs-form-hint">Letras um pouco mais próximas.</span>
+                                </span>
+                                <input type="radio" id="espacamento-pequeno" name="font_spacing" value="pequeno" />
+                            </label>
+
+                            <label class="gs-list-row" for="espacamento-grande">
+                                <span>
+                                    <strong>Grande</strong>
+                                    <span class="gs-form-hint">Letras e palavras mais separadas, para ler com menos
+                                        esforço.</span>
+                                </span>
+                                <input type="radio" id="espacamento-grande" name="font_spacing" value="grande" />
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="gs-card" style="border: 0;">
+                        <legend class="gs-side-title">Tamanho da fonte</legend>
+                        <p class="gs-card-subtitle" id="dica-tamanho">
+                            Aumenta ou diminui o texto e os elementos da tela juntos.
+                        </p>
+
+                        <div class="gs-stack" role="radiogroup" aria-describedby="dica-tamanho">
+                            <label class="gs-list-row" for="tamanho-normal">
+                                <span>
+                                    <strong>Padrão</strong>
+                                    <span class="gs-form-hint">O tamanho que o kit já usa.</span>
+                                </span>
+                                <input type="radio" id="tamanho-normal" name="font_size" value="normal" />
+                            </label>
+
+                            <label class="gs-list-row" for="tamanho-pequeno">
+                                <span>
+                                    <strong>Pequeno</strong>
+                                    <span class="gs-form-hint">Cabe mais conteúdo na tela.</span>
+                                </span>
+                                <input type="radio" id="tamanho-pequeno" name="font_size" value="pequeno" />
+                            </label>
+
+                            <label class="gs-list-row" for="tamanho-grande">
+                                <span>
+                                    <strong>Grande</strong>
+                                    <span class="gs-form-hint">Texto e botões maiores, para baixa visão.</span>
+                                </span>
+                                <input type="radio" id="tamanho-grande" name="font_size" value="grande" />
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <section class="gs-card" aria-labelledby="titulo-previa">
+                        <h2 class="gs-side-title" id="titulo-previa">Prévia</h2>
+                        <p class="gs-card-subtitle">Um pedaço de tela real com as escolhas acima aplicadas.</p>
+
+                        <article class="gs-post">
+                            <div class="gs-post-body">
+                                <div class="gs-post-head">
+                                    <span class="gs-avatar" style="background: #4db8ff;" aria-hidden="true">A</span>
+                                    <div class="gs-post-user">
+                                        <div class="gs-meta">
+                                            <strong>Ana Ribeiro</strong>
+                                            <span>há 2 horas</span>
+                                        </div>
+                                        <div class="gs-cluster">
+                                            <span class="gs-chip is-blue"><span class="gs-chip-dot"
+                                                    aria-hidden="true"></span><span>Matemática</span></span>
+                                        </div>
+                                        <h3 class="gs-post-title">Exemplo de publicação</h3>
+                                        <p class="gs-post-copy">
+                                            É assim que o texto do feed vai ficar com o contraste e a fonte que você
+                                            escolheu.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="gs-post-foot">
+                                <span class="gs-action">12 curtidas</span>
+                                <span class="gs-action">7 respostas</span>
+                            </div>
+                        </article>
+
+                        <div class="gs-cluster" style="margin-top: 12px;">
+                            <button class="gs-btn gs-btn-primary" type="button">Botão principal</button>
+                            <button class="gs-btn gs-btn-secondary" type="button">Botão secundário</button>
+                        </div>
+                    </section>
+
+                    <div class="gs-compose-foot">
+                        <button class="gs-btn gs-btn-ghost" type="button" id="restaurar">Voltar ao padrão</button>
+                        <button class="gs-btn gs-btn-primary" type="submit" id="salvar">Salvar preferências</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+
+</html>

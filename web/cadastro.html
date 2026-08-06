@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Criar conta | GerminaStack</title>
+    <meta name="description" content="Crie sua conta do Germinare para publicar duvidas e responder a turma." />
+
+    <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
+    <link rel="stylesheet" href="/static/vendor/germinastack/themes.css" />
+
+    <!-- Sem defer de proposito: aplica o tema salvo antes da primeira pintura. -->
+    <script src="/static/js/tema-inicial.js"></script>
+
+    <script src="/static/vendor/germinastack/js/germinastack.js" defer></script>
+    <script type="module" src="/static/js/pages/cadastro.js"></script>
+</head>
+
+<body>
+    <a class="gs-skip-link" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+    <header class="gs-topbar">
+        <a class="gs-brand" href="/">
+            <span class="gs-brand-mark" aria-hidden="true">GS</span>
+            <span>GerminaStack</span>
+        </a>
+
+        <nav class="gs-nav" aria-label="Navegação principal">
+            <a class="gs-nav-link" href="/">Feed</a>
+            <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
+        </nav>
+    </header>
+
+    <main class="gs-page" id="conteudo-principal">
+        <div style="max-width: 30rem; margin: 0 auto;">
+            <div class="gs-section-head">
+                <h1>Criar conta</h1>
+                <p>Preencha os dados abaixo. Todos os campos são obrigatórios.</p>
+            </div>
+
+            <div id="estado-cadastro" role="status" aria-live="polite" hidden></div>
+
+            <div class="gs-card">
+                <form class="gs-stack" id="form-cadastro" novalidate>
+                    <label class="gs-form-group" for="nome">
+                        <span class="gs-label">Nome completo</span>
+                        <input class="gs-input" type="text" id="nome" name="nome" required autocomplete="name"
+                            maxlength="120" aria-describedby="erro-nome" />
+                        <span class="gs-form-error" id="erro-nome" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="usuario">
+                        <span class="gs-label">Usuário</span>
+                        <input class="gs-input" type="text" id="usuario" name="usuario" required autocomplete="username"
+                            maxlength="40" aria-describedby="dica-usuario erro-usuario" />
+                        <span class="gs-form-hint" id="dica-usuario">
+                            É o nome que os colegas usam para te marcar com @. Só letras, números, ponto e traço
+                            baixo.
+                        </span>
+                        <span class="gs-form-error" id="erro-usuario" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="email">
+                        <span class="gs-label">E-mail</span>
+                        <input class="gs-input" type="email" id="email" name="email" required autocomplete="email"
+                            aria-describedby="erro-email" />
+                        <span class="gs-form-error" id="erro-email" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="ano">
+                        <span class="gs-label">Turma</span>
+                        <span class="gs-select-native">
+                            <select id="ano" name="ano" required aria-describedby="erro-ano">
+                                <option value="">Selecione sua turma</option>
+                            </select>
+                        </span>
+                        <span class="gs-form-error" id="erro-ano" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="senha">
+                        <span class="gs-label">Senha</span>
+                        <input class="gs-input" type="password" id="senha" name="senha" required
+                            autocomplete="new-password" minlength="8" aria-describedby="dica-senha erro-senha" />
+                        <span class="gs-form-hint" id="dica-senha">Pelo menos 8 caracteres.</span>
+                        <span class="gs-form-error" id="erro-senha" role="alert"></span>
+                    </label>
+
+                    <label class="gs-form-group" for="confirmar-senha">
+                        <span class="gs-label">Confirmar senha</span>
+                        <input class="gs-input" type="password" id="confirmar-senha" name="confirmar-senha" required
+                            autocomplete="new-password" aria-describedby="erro-confirmar-senha" />
+                        <span class="gs-form-error" id="erro-confirmar-senha" role="alert"></span>
+                    </label>
+
+                    <div class="gs-compose-foot">
+                        <a class="gs-btn gs-btn-ghost" href="/login">Já tenho conta</a>
+                        <button class="gs-btn gs-btn-primary" type="submit">Criar conta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>

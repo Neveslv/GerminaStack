@@ -5,7 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Acessibilidade | GerminaStack</title>
-    <meta name="description" content="Escolha o contraste e a fonte que voce enxerga melhor no GerminaStack." />
+    <meta name="description"
+        content="Escolha o contraste, a fonte, o espacamento e o tamanho que voce enxerga melhor no GerminaStack." />
 
     <link rel="stylesheet" href="/static/vendor/germinastack/css/germinastack.css" />
     <link rel="stylesheet" href="/static/vendor/germinastack/themes.css" />
@@ -58,8 +59,8 @@
             <div class="gs-section-head">
                 <h1>Acessibilidade</h1>
                 <p>
-                    Escolha o contraste e a fonte que você lê com menos esforço. A mudança vale para todas as
-                    páginas e fica salva na sua conta.
+                    Escolha o contraste, a fonte, o espaçamento e o tamanho com que você lê com menos esforço.
+                    A mudança vale para todas as páginas e fica salva na sua conta.
                 </p>
             </div>
 
@@ -183,6 +184,73 @@
                                     <span class="gs-form-hint">Base pesada nas letras, pensada para dislexia.</span>
                                 </span>
                                 <input type="radio" id="fonte-dyslexic" name="font_family" value="open_dyslexic" />
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="gs-card" style="border: 0;">
+                        <legend class="gs-side-title">Espaçamento</legend>
+                        <p class="gs-card-subtitle" id="dica-espacamento">
+                            Espaço entre letras e palavras, independente da fonte escolhida.
+                        </p>
+
+                        <div class="gs-stack" role="radiogroup" aria-describedby="dica-espacamento">
+                            <label class="gs-list-row" for="espacamento-normal">
+                                <span>
+                                    <strong>Padrão</strong>
+                                    <span class="gs-form-hint">O espaçamento que a fonte já usa.</span>
+                                </span>
+                                <input type="radio" id="espacamento-normal" name="font_spacing" value="normal" />
+                            </label>
+
+                            <label class="gs-list-row" for="espacamento-pequeno">
+                                <span>
+                                    <strong>Pequeno</strong>
+                                    <span class="gs-form-hint">Letras um pouco mais próximas.</span>
+                                </span>
+                                <input type="radio" id="espacamento-pequeno" name="font_spacing" value="pequeno" />
+                            </label>
+
+                            <label class="gs-list-row" for="espacamento-grande">
+                                <span>
+                                    <strong>Grande</strong>
+                                    <span class="gs-form-hint">Letras e palavras mais separadas, para ler com menos
+                                        esforço.</span>
+                                </span>
+                                <input type="radio" id="espacamento-grande" name="font_spacing" value="grande" />
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="gs-card" style="border: 0;">
+                        <legend class="gs-side-title">Tamanho da fonte</legend>
+                        <p class="gs-card-subtitle" id="dica-tamanho">
+                            Aumenta ou diminui o texto e os elementos da tela juntos.
+                        </p>
+
+                        <div class="gs-stack" role="radiogroup" aria-describedby="dica-tamanho">
+                            <label class="gs-list-row" for="tamanho-normal">
+                                <span>
+                                    <strong>Padrão</strong>
+                                    <span class="gs-form-hint">O tamanho que o kit já usa.</span>
+                                </span>
+                                <input type="radio" id="tamanho-normal" name="font_size" value="normal" />
+                            </label>
+
+                            <label class="gs-list-row" for="tamanho-pequeno">
+                                <span>
+                                    <strong>Pequeno</strong>
+                                    <span class="gs-form-hint">Cabe mais conteúdo na tela.</span>
+                                </span>
+                                <input type="radio" id="tamanho-pequeno" name="font_size" value="pequeno" />
+                            </label>
+
+                            <label class="gs-list-row" for="tamanho-grande">
+                                <span>
+                                    <strong>Grande</strong>
+                                    <span class="gs-form-hint">Texto e botões maiores, para baixa visão.</span>
+                                </span>
+                                <input type="radio" id="tamanho-grande" name="font_size" value="grande" />
                             </label>
                         </div>
                     </fieldset>

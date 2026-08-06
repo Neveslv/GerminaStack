@@ -10,6 +10,8 @@ export let PREFERENCIAS_LOCAIS = {
     id_user: 4,
     contrast_theme: 'normal',
     font_family: 'normal',
+    font_spacing: 'normal',
+    font_size: 'normal',
     created_at: '2026-02-10T08:00:00-03:00'
 };
 

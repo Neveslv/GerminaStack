@@ -45,7 +45,9 @@ async function sincronizarPreferencias() {
 
         const mudou =
             doServidor.contrast_theme !== local.contrast_theme ||
-            doServidor.font_family !== local.font_family;
+            doServidor.font_family !== local.font_family ||
+            doServidor.font_spacing !== local.font_spacing ||
+            doServidor.font_size !== local.font_size;
 
         if (!mudou) return;
 

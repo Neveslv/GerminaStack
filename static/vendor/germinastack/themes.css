@@ -577,8 +577,12 @@ body {
 
 [data-fonte="open_dyslexic"] {
     --gsk-fonte: "OpenDyslexic", "Comic Sans MS", Verdana, sans-serif;
-    letter-spacing: 0.02em;
-    word-spacing: 0.08em;
+    /* Contribui pra soma em `body`, seção 8 (font_spacing), em vez de fixar
+       letter-spacing/word-spacing aqui direto — assim o espaçamento que a
+       fonte já pede e o que a pessoa escolhe em font_spacing se somam em vez
+       de um sobrescrever o outro. */
+    --gsk-letter-spacing-fonte: 0.02em;
+    --gsk-word-spacing-fonte: 0.08em;
 }
 
 /**
@@ -614,3 +618,74 @@ inclua o arquivo na cópia de fontes do rollup.config.mjs.
     font-display: swap;
 }
 */
+
+/* =========================================================
+   8. font_spacing
+   ========================================================= */
+
+/**
+ * Espaçamento de letra e de palavra numa escala de três pontos
+ * (normal/pequeno/grande), independente da fonte escolhida — é o que o WCAG
+ * 1.4.12 (Text Spacing) pede: a pessoa precisa poder aumentar o espaçamento
+ * do texto sem perder conteúdo ou funcionalidade.
+ *
+ * letter-spacing/word-spacing são propriedades herdadas por natureza, então
+ * aplicar em `body` já cobre qualquer texto que não tenha o próprio
+ * rastreamento definido. Onde o componente já define um (títulos com tracking
+ * negativo de propósito, badges em caixa alta etc.), aquele valor mais
+ * específico continua valendo — a preferência da pessoa ajusta o texto
+ * corrido, não briga com decisão tipográfica pontual de um componente.
+ *
+ * As duas variáveis "-fonte" (contribuição da fonte, ver open_dyslexic acima)
+ * e "-usuario" (esta seção) somam em vez de se substituir: quem usa
+ * OpenDyslexic e pede espaçamento "grande" ganha os dois ajustes juntos.
+ *
+ * O valor padrão de cada uma vai no fallback do `var()`, e não num bloco
+ * `:root` — `:root` e `[data-fonte="..."]` têm a mesma especificidade (0,1,0),
+ * então um `:root` declarado aqui embaixo venceria por ordem de arquivo e
+ * zeraria a contribuição da fonte declarada na seção anterior.
+ */
+body {
+    letter-spacing: calc(
+        var(--gsk-letter-spacing-fonte, 0em) + var(--gsk-letter-spacing-usuario, 0em)
+    );
+    word-spacing: calc(
+        var(--gsk-word-spacing-fonte, 0em) + var(--gsk-word-spacing-usuario, 0em)
+    );
+}
+
+[data-espacamento="pequeno"] {
+    --gsk-letter-spacing-usuario: -0.01em;
+}
+
+[data-espacamento="grande"] {
+    --gsk-letter-spacing-usuario: 0.05em;
+    --gsk-word-spacing-usuario: 0.12em;
+}
+
+/* =========================================================
+   9. font_size
+   ========================================================= */
+
+/**
+ * O kit define font-size em px direto em cerca de 60 seletores (ver
+ * src/css/*.css), sem base em rem — então uma variável de escala aplicada só
+ * em `html { font-size }` não teria efeito nenhum, porque nenhum componente
+ * herda tamanho dali. Reescrever cada seletor para rem é a correção correta
+ * a longo prazo (fica registrado aqui como pendência), mas é uma mudança
+ * grande demais pra caber numa preferência de usuário.
+ *
+ * Até lá, `zoom` escala o documento inteiro — texto, ícones, espaçamento —
+ * junto, sem exigir tocar em nenhum componente. Equivale ao zoom de página
+ * que o navegador já oferece, só que aplicado automaticamente pela
+ * preferência salva da pessoa. Suportado nativamente por Chrome/Edge/Safari;
+ * Firefox suporta a partir da versão 126 (2024) — antes disso a página só
+ * fica no tamanho normal, sem quebrar.
+ */
+[data-tamanho="pequeno"] body {
+    zoom: 0.9;
+}
+
+[data-tamanho="grande"] body {
+    zoom: 1.15;
+}

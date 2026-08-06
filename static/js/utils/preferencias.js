@@ -28,10 +28,31 @@ export const FONTES = [
     { valor: 'open_dyslexic', rotulo: 'OpenDyslexic', descricao: 'Base pesada nas letras, pensada para dislexia.' }
 ];
 
+/** font_spacing — mesmo domínio do CHECK da tabela `preferences`. */
+export const ESPACAMENTOS = [
+    { valor: 'normal', rotulo: 'Padrão', descricao: 'O espaçamento que a fonte já usa.' },
+    { valor: 'pequeno', rotulo: 'Pequeno', descricao: 'Letras um pouco mais próximas.' },
+    { valor: 'grande', rotulo: 'Grande', descricao: 'Letras e palavras mais separadas, para ler com menos esforço.' }
+];
+
+/** font_size — mesmo domínio do CHECK da tabela `preferences`. */
+export const TAMANHOS = [
+    { valor: 'normal', rotulo: 'Padrão', descricao: 'O tamanho que o kit já usa.' },
+    { valor: 'pequeno', rotulo: 'Pequeno', descricao: 'Cabe mais conteúdo na tela.' },
+    { valor: 'grande', rotulo: 'Grande', descricao: 'Texto e botões maiores, para baixa visão.' }
+];
+
 const VALORES_DE_TEMA = TEMAS.map((tema) => tema.valor);
 const VALORES_DE_FONTE = FONTES.map((fonte) => fonte.valor);
+const VALORES_DE_ESPACAMENTO = ESPACAMENTOS.map((espacamento) => espacamento.valor);
+const VALORES_DE_TAMANHO = TAMANHOS.map((tamanho) => tamanho.valor);
 
-export const PREFERENCIAS_PADRAO = { contrast_theme: 'normal', font_family: 'normal' };
+export const PREFERENCIAS_PADRAO = {
+    contrast_theme: 'normal',
+    font_family: 'normal',
+    font_spacing: 'normal',
+    font_size: 'normal'
+};
 
 function normalizar(preferencias = {}) {
     return {
@@ -40,6 +61,12 @@ function normalizar(preferencias = {}) {
             : 'normal',
         font_family: VALORES_DE_FONTE.includes(preferencias.font_family)
             ? preferencias.font_family
+            : 'normal',
+        font_spacing: VALORES_DE_ESPACAMENTO.includes(preferencias.font_spacing)
+            ? preferencias.font_spacing
+            : 'normal',
+        font_size: VALORES_DE_TAMANHO.includes(preferencias.font_size)
+            ? preferencias.font_size
             : 'normal'
     };
 }
@@ -64,7 +91,7 @@ export function guardarPreferenciasLocais(preferencias) {
  * do kit continuar valendo sem nenhuma regra nossa por cima.
  */
 export function aplicarPreferencias(preferencias) {
-    const { contrast_theme, font_family } = normalizar(preferencias);
+    const { contrast_theme, font_family, font_spacing, font_size } = normalizar(preferencias);
     const raiz = document.documentElement;
 
     if (contrast_theme === 'normal') raiz.removeAttribute('data-tema');
@@ -73,7 +100,13 @@ export function aplicarPreferencias(preferencias) {
     if (font_family === 'normal') raiz.removeAttribute('data-fonte');
     else raiz.setAttribute('data-fonte', font_family);
 
-    return { contrast_theme, font_family };
+    if (font_spacing === 'normal') raiz.removeAttribute('data-espacamento');
+    else raiz.setAttribute('data-espacamento', font_spacing);
+
+    if (font_size === 'normal') raiz.removeAttribute('data-tamanho');
+    else raiz.setAttribute('data-tamanho', font_size);
+
+    return { contrast_theme, font_family, font_spacing, font_size };
 }
 
 export { normalizar as normalizarPreferencias };

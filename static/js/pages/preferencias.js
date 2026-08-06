@@ -1,5 +1,6 @@
 /**
- * Página de acessibilidade: escolhe contrast_theme e font_family.
+ * Página de acessibilidade: escolhe contrast_theme, font_family, font_spacing
+ * e font_size — os quatro campos da tabela `preferences`.
  *
  * A escolha vale na hora, antes de salvar. É proposital: comparar contraste
  * de cabeça não funciona: quem precisa do recurso precisa VER o resultado
@@ -15,6 +16,9 @@ import {
 } from '../utils/preferencias.js';
 import { criarPainelDeEstado } from '../utils/dom.js';
 
+/** Os quatro campos de `preferences`, na ordem em que aparecem no formulário. */
+const CAMPOS = ['contrast_theme', 'font_family', 'font_spacing', 'font_size'];
+
 const formulario = document.querySelector('#form-preferencias');
 const botaoSalvar = document.querySelector('#salvar');
 const botaoRestaurar = document.querySelector('#restaurar');
@@ -25,28 +29,20 @@ let salvasNoServidor = { ...PREFERENCIAS_PADRAO };
 
 function lerFormulario() {
     const dados = new FormData(formulario);
-    return {
-        contrast_theme: dados.get('contrast_theme') ?? 'normal',
-        font_family: dados.get('font_family') ?? 'normal'
-    };
+    return Object.fromEntries(CAMPOS.map((campo) => [campo, dados.get(campo) ?? 'normal']));
 }
 
-function marcarFormulario({ contrast_theme, font_family }) {
-    formulario.querySelectorAll('input[name="contrast_theme"]').forEach((entrada) => {
-        entrada.checked = entrada.value === contrast_theme;
-    });
-
-    formulario.querySelectorAll('input[name="font_family"]').forEach((entrada) => {
-        entrada.checked = entrada.value === font_family;
+function marcarFormulario(preferencias) {
+    CAMPOS.forEach((campo) => {
+        formulario.querySelectorAll(`input[name="${campo}"]`).forEach((entrada) => {
+            entrada.checked = entrada.value === preferencias[campo];
+        });
     });
 }
 
 function temMudancaPendente() {
     const atual = lerFormulario();
-    return (
-        atual.contrast_theme !== salvasNoServidor.contrast_theme ||
-        atual.font_family !== salvasNoServidor.font_family
-    );
+    return CAMPOS.some((campo) => atual[campo] !== salvasNoServidor[campo]);
 }
 
 function atualizarBotaoSalvar() {
@@ -70,7 +66,7 @@ function pre_visualizar() {
 }
 
 formulario.addEventListener('change', (evento) => {
-    if (evento.target.name !== 'contrast_theme' && evento.target.name !== 'font_family') return;
+    if (!CAMPOS.includes(evento.target.name)) return;
     pre_visualizar();
 });
 
@@ -78,7 +74,7 @@ botaoRestaurar.addEventListener('click', () => {
     marcarFormulario(PREFERENCIAS_PADRAO);
     pre_visualizar();
     window.GerminaStackUI?.announceToScreenReader(
-        'Contraste e fonte voltaram ao padrão. Salve para manter.',
+        'Contraste, fonte, espaçamento e tamanho voltaram ao padrão. Salve para manter.',
         'polite'
     );
 });
@@ -118,10 +114,7 @@ async function carregarPagina() {
     try {
         const doServidor = await buscarPreferencias();
 
-        salvasNoServidor = {
-            contrast_theme: doServidor.contrast_theme,
-            font_family: doServidor.font_family
-        };
+        salvasNoServidor = Object.fromEntries(CAMPOS.map((campo) => [campo, doServidor[campo] ?? 'normal']));
 
         marcarFormulario(salvasNoServidor);
         aplicarPreferencias(salvasNoServidor);

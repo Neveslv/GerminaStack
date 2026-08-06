@@ -1,0 +1,68 @@
+/**
+ * Popover de notificações do produto — fica FORA do kit, de propósito,
+ * assim como product-themes.css.
+ *
+ * O kit já tem um menu contextual genérico (.gs-menu / .gs-menu-trigger /
+ * .gs-menu-panel), usado por exemplo no botão "⋮" de um post. O GerminaStack
+ * reaproveita esse mesmo mecanismo para o popover de notificações do
+ * cabeçalho, em vez de ter uma página inteira só para isso — mas o
+ * .gs-menu-panel do kit foi pensado para itens de uma linha como
+ * "Copiar texto" (largura fixa de 240px, sem teto de altura). Notificação é
+ * frase inteira, então o painel de notificações precisa de mais largura e de
+ * rolagem própria.
+ *
+ * Isso é específico do produto, não do kit: as classes .gs-notif-* não
+ * fazem sentido para um consumidor genérico da lib, só para quem monta esse
+ * popover exato (ver componentes/cabecalho.js no repositório GerminaStack).
+ * Por isso vive num arquivo à parte, importado só por quem precisa dele —
+ * do mesmo jeito que product-themes.css não é forçado em quem só quer o
+ * kit base.
+ */
+
+.gs-notif-panel {
+    display: flex;
+    flex-direction: column;
+    width: min(360px, 92vw);
+    max-height: min(70vh, 420px);
+    padding: 0;
+    overflow: hidden;
+}
+
+.gs-notif-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gs-hairline);
+}
+
+.gs-notif-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    overflow-y: auto;
+}
+
+.gs-notif-item {
+    padding: 10px;
+    border-radius: var(--gs-radius-sm);
+    background: var(--gs-surface);
+}
+
+.gs-notif-item.is-nao-lida {
+    background: var(--gs-blue-bg);
+}
+
+.gs-notif-item p {
+    margin: 4px 0 8px;
+}
+
+.gs-notif-vazio {
+    padding: 24px 16px;
+    margin: 0;
+    text-align: center;
+    color: var(--gs-slate);
+}

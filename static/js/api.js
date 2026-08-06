@@ -233,6 +233,14 @@ export async function buscarUsuario(username) {
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
+/** Salva os dados editáveis do perfil do usuário logado. */
+export async function salvarPerfil(dados) {
+    return requisitar('/api/me', {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+}
+
 /** Devolve as publicações escritas por um usuário. */
 export async function listarPostsDoAutor(idAutor) {
     if (USAR_DADOS_LOCAIS) {

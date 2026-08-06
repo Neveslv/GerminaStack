@@ -1327,6 +1327,23 @@ fieldset.gs-card > legend + * {
   line-height: 1.7;
 }
 
+.gs-post-media {
+  margin: 16px 0 0;
+}
+
+.gs-post-media img {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--gs-radius-sm);
+}
+
+.gs-post-media figcaption {
+  margin-top: 8px;
+  color: var(--gs-steel);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .gs-post-foot {
   padding: 12px 20px;
   border-top: 1px solid var(--gs-hairline-soft);

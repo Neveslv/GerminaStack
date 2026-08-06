@@ -185,6 +185,7 @@ grade.addEventListener('click', (evento) => {
 
     const id = Number(cartao.dataset.id);
     selecionarMateria(id === materiaAtiva ? null : id);
+    tituloPublicacoes.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 window.addEventListener('popstate', () => {

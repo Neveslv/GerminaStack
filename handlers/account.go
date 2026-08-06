@@ -16,9 +16,20 @@ import (
 
 type AccountRepository interface {
 	GetProfile(context.Context, int64) (model.User, error)
+	GetPublicProfile(context.Context, string) (model.User, error)
 	UpdateProfile(context.Context, int64, model.User) (model.User, error)
 	GetPreferences(context.Context, int64) (model.Preference, error)
 	UpsertPreferences(context.Context, int64, model.Preference) (model.Preference, error)
+}
+
+type publicProfileResponse struct {
+	ID                      int64      `json:"id"`
+	YearID                  int64      `json:"id_year"`
+	Name                    string     `json:"name"`
+	ProfileImageURL         *string    `json:"profile_image_url"`
+	ProfileImageDescription *string    `json:"profile_image_description"`
+	Username                string     `json:"username"`
+	CreatedAt               *time.Time `json:"created_at"`
 }
 
 type AccountHandler struct {
@@ -43,6 +54,26 @@ func (h *AccountHandler) GetProfile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, profile)
+}
+
+func (h *AccountHandler) GetPublicProfile(c *gin.Context) {
+	username := strings.TrimSpace(c.Param("username"))
+	if username == "" || len(username) > 100 {
+		writeInvalidAccountRequest(c)
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	profile, err := h.repository.GetPublicProfile(ctx, username)
+	if err != nil {
+		writeAccountError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, publicProfileResponse{
+		ID: profile.ID, YearID: profile.YearID, Name: profile.Name,
+		ProfileImageURL: profile.ProfileImageURL, ProfileImageDescription: profile.ProfileImageDescription,
+		Username: profile.Username, CreatedAt: profile.CreatedAt,
+	})
 }
 
 func (h *AccountHandler) UpdateProfile(c *gin.Context) {

@@ -50,9 +50,31 @@ func TestAccountHandlerValidatesProfileImagePairAndDefaultsPreferences(t *testin
 	}
 }
 
+func TestAccountHandlerReturnsPublicProfileWithoutEmail(t *testing.T) {
+	t.Parallel()
+	repository := &accountRepositoryFake{publicProfile: model.User{ID: 7, YearID: 2, Name: "Bruno", Username: "bruno.salles", Email: "private@example.com"}}
+	response := performPublicProfileRequest(NewAccountHandler(repository, time.Second).GetPublicProfile, "bruno.salles", 42)
+	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), "private@example.com") || repository.publicUsername != "bruno.salles" {
+		t.Fatalf("status/body/repository = %d/%s/%#v", response.Code, response.Body.String(), repository)
+	}
+}
+
+func performPublicProfileRequest(handler gin.HandlerFunc, username string, userID int64) *httptest.ResponseRecorder {
+	router := gin.New()
+	router.GET("/api/users/:username", func(c *gin.Context) {
+		c.Set(auth.ContextUserID, userID)
+		handler(c)
+	})
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/users/"+username, nil))
+	return recorder
+}
+
 type accountRepositoryFake struct {
 	profile            model.User
 	profileUserID      int64
+	publicProfile      model.User
+	publicUsername     string
 	preference         model.Preference
 	preferenceUserID   int64
 	preferenceNotFound bool
@@ -61,6 +83,10 @@ type accountRepositoryFake struct {
 func (f *accountRepositoryFake) GetProfile(_ context.Context, userID int64) (model.User, error) {
 	f.profileUserID = userID
 	return f.profile, nil
+}
+func (f *accountRepositoryFake) GetPublicProfile(_ context.Context, username string) (model.User, error) {
+	f.publicUsername = username
+	return f.publicProfile, nil
 }
 func (f *accountRepositoryFake) UpdateProfile(_ context.Context, userID int64, profile model.User) (model.User, error) {
 	f.profileUserID = userID

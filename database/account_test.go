@@ -42,6 +42,23 @@ RETURNING id, id_year, name, profile_image_url, profile_image_description, usern
 	assertCatalogExpectations(t, mock)
 }
 
+func TestPostgresAccountRepositoryReadsPublicProfileWithoutEmail(t *testing.T) {
+	t.Parallel()
+	db, mock := newCatalogMock(t)
+	const query = `SELECT id, id_year, name, profile_image_url, profile_image_description, username, created_at
+FROM users
+WHERE username = $1`
+	mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs("ana.silva").WillReturnRows(
+		sqlmock.NewRows([]string{"id", "id_year", "name", "profile_image_url", "profile_image_description", "username", "created_at"}).
+			AddRow(int64(42), int64(7), "Ana Silva", nil, nil, "ana.silva", nil),
+	)
+	profile, err := NewPostgresAccountRepository(db).GetPublicProfile(context.Background(), "ana.silva")
+	if err != nil || profile.ID != 42 || profile.Username != "ana.silva" || profile.Email != "" {
+		t.Fatalf("GetPublicProfile() = (%#v, %v)", profile, err)
+	}
+	assertCatalogExpectations(t, mock)
+}
+
 func TestPostgresAccountRepositoryUpsertsPreferencesAndMapsMissingUser(t *testing.T) {
 	t.Parallel()
 	db, mock := newCatalogMock(t)

@@ -41,6 +41,24 @@ WHERE id = $1`
 	return user, nil
 }
 
+func (r *PostgresAccountRepository) GetPublicProfile(ctx context.Context, username string) (model.User, error) {
+	const query = `SELECT id, id_year, name, profile_image_url, profile_image_description, username, created_at
+FROM users
+WHERE username = $1`
+	var user model.User
+	err := r.db.QueryRowContext(ctx, query, username).Scan(
+		&user.ID, &user.YearID, &user.Name, &user.ProfileImageURL,
+		&user.ProfileImageDescription, &user.Username, &user.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return model.User{}, ErrAccountNotFound
+	}
+	if err != nil {
+		return model.User{}, fmt.Errorf("get public profile: %w", err)
+	}
+	return user, nil
+}
+
 func (r *PostgresAccountRepository) UpdateProfile(ctx context.Context, userID int64, user model.User) (model.User, error) {
 	const query = `UPDATE users
 SET name = $1, profile_image_url = $2, profile_image_description = $3

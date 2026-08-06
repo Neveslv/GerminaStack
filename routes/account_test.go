@@ -22,7 +22,7 @@ func TestRegisterAccountRoutesProtectsAllAccountEndpoints(t *testing.T) {
 	for _, route := range router.Routes() {
 		got[route.Method+" "+route.Path] = true
 	}
-	for _, want := range []string{"GET /api/me", "PATCH /api/me", "GET /api/me/preferences", "PATCH /api/me/preferences"} {
+	for _, want := range []string{"GET /api/users/:username", "GET /api/me", "PATCH /api/me", "GET /api/me/preferences", "PATCH /api/me/preferences"} {
 		if !got[want] {
 			t.Fatalf("route %q not registered; got %#v", want, got)
 		}
@@ -38,6 +38,9 @@ func TestRegisterAccountRoutesProtectsAllAccountEndpoints(t *testing.T) {
 type routeAccountRepositoryFake struct{}
 
 func (routeAccountRepositoryFake) GetProfile(context.Context, int64) (model.User, error) {
+	return model.User{}, nil
+}
+func (routeAccountRepositoryFake) GetPublicProfile(context.Context, string) (model.User, error) {
 	return model.User{}, nil
 }
 func (routeAccountRepositoryFake) UpdateProfile(context.Context, int64, model.User) (model.User, error) {

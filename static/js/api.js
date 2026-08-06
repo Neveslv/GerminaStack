@@ -226,10 +226,10 @@ export async function buscarUsuario(username) {
         if (!usuario) throw new ErroDeApi('Usuário não encontrado.', 404);
         return usuario;
     }
-    const [usuario, anos] = await Promise.all([buscarMeuPerfil(), listarAnos()]);
-    if (username && username !== usuario.username) {
-        throw new ErroDeApi('Perfil público ainda não está disponível nesta API.', 404);
-    }
+    const [meuPerfil, anos] = await Promise.all([buscarMeuPerfil(), listarAnos()]);
+    const usuario = !username || username === meuPerfil.username
+        ? meuPerfil
+        : await requisitar(`/api/users/${encodeURIComponent(username)}`);
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 

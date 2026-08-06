@@ -142,6 +142,10 @@ body {
     filter: brightness(1.08);
 }
 
+.gs-hero-actions .gs-btn-secondary {
+    color: var(--gsk-hero-texto);
+}
+
 .gs-alert {
     border-color: var(--gsk-alerta-borda);
     background: var(--gsk-alerta-fundo);
@@ -528,6 +532,13 @@ body {
 
 .gs-hero-stats strong {
     color: inherit;
+}
+
+.gs-input:disabled,
+.gs-textarea:disabled,
+.gs-select-native select:disabled {
+    background: var(--gsk-superficie-campo);
+    color: var(--gs-muted);
 }
 
 /* =========================================================

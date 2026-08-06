@@ -60,9 +60,16 @@ func run() error {
 		return fmt.Errorf("database migration failed: %w", err)
 	}
 
-	mailer, err := auth.NewSMTPMailer(cfg.SMTP)
+	var mailer auth.MailSender
+	mailer, err = auth.NewSMTPMailer(cfg.SMTP)
 	if err != nil {
 		return errors.New("SMTP initialization failed")
+	}
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" && cfg.GoogleRefreshToken != "" {
+		mailer, err = auth.NewGmailMailer(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRefreshToken, cfg.SMTP.FromAddress)
+		if err != nil {
+			return errors.New("Gmail initialization failed")
+		}
 	}
 	credentials := database.NewPostgresCredentialRepository(db)
 	challenges := database.NewPostgresChallengeRepository(db)

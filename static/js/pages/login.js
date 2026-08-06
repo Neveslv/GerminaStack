@@ -1,15 +1,17 @@
 /** Página de login: valida credenciais e envia à API. */
 
-import { entrar } from '../api.js';
+import { completarLogin, entrar } from '../api.js';
 import { criarPainelDeEstado } from '../utils/dom.js';
 
 const formulario = document.querySelector('#form-login');
 const estado = criarPainelDeEstado(document.querySelector('#estado-login'));
 
 const REGRAS = [
-    { campo: 'usuario', erro: 'erro-usuario', mensagem: 'Informe seu usuário.' },
+    { campo: 'email', erro: 'erro-email', mensagem: 'Informe seu e-mail institucional.' },
     { campo: 'senha', erro: 'erro-senha', mensagem: 'Informe sua senha.' }
 ];
+
+let desafio;
 
 function limparErros() {
     REGRAS.forEach(({ campo, erro }) => {
@@ -36,10 +38,16 @@ function validar() {
 formulario.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     limparErros();
+    document.querySelector('#erro-codigo').textContent = '';
+    document.querySelector('#codigo').setAttribute('aria-invalid', 'false');
 
-    const invalido = validar();
+    const invalido = desafio
+        ? (/^[0-9]{6}$/.test(document.querySelector('#codigo').value.trim()) ? null : document.querySelector('#codigo'))
+        : validar();
     if (invalido) {
+        if (desafio) document.querySelector('#erro-codigo').textContent = 'Informe o código de 6 dígitos.';
         estado.erro('Revise os campos destacados', 'Os campos com erro estão marcados abaixo.');
+        invalido.setAttribute('aria-invalid', 'true');
         invalido.focus();
         return;
     }
@@ -49,9 +57,25 @@ formulario.addEventListener('submit', async (evento) => {
     estado.carregando('Entrando…');
 
     try {
-        await entrar({
-            username: document.querySelector('#usuario').value.trim(),
-            password: document.querySelector('#senha').value
+        if (!desafio) {
+            const resposta = await entrar({
+                email: document.querySelector('#email').value.trim(),
+                password: document.querySelector('#senha').value
+            });
+            desafio = resposta.challenge_id;
+            document.querySelector('#grupo-codigo').hidden = false;
+            document.querySelector('#email').disabled = true;
+            document.querySelector('#senha').disabled = true;
+            document.querySelector('#codigo').focus();
+            botao.textContent = 'Confirmar código';
+            botao.disabled = false;
+            estado.carregando('Código enviado para seu e-mail.');
+            return;
+        }
+
+        await completarLogin({
+            challenge_id: desafio,
+            code: document.querySelector('#codigo').value.trim()
         });
 
         window.GerminaStackUI?.showToast({
@@ -64,6 +88,7 @@ formulario.addEventListener('submit', async (evento) => {
     } catch (erro) {
         estado.erro(erro.message, 'Tente de novo em alguns instantes.');
         botao.disabled = false;
-        document.querySelector('#senha').value = '';
+        if (desafio) document.querySelector('#codigo').value = '';
+        else document.querySelector('#senha').value = '';
     }
 });

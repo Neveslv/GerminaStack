@@ -578,6 +578,15 @@ func discussionQueryID(query url.Values, key string) (*int64, bool) {
 	return &id, true
 }
 
+func positivePathID(c *gin.Context) (int64, bool) {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeInvalidDiscussionRequest(c)
+		return 0, false
+	}
+	return id, true
+}
+
 func discussionQueryBool(query url.Values, key string) (bool, bool) {
 	value, supplied := query[key]
 	if !supplied {

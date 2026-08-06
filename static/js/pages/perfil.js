@@ -7,7 +7,6 @@
  */
 
 import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao } from '../api.js';
-import { USUARIO_ATUAL } from '../mock/sessao.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
 import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
@@ -20,7 +19,7 @@ const estadoPerfil = criarPainelDeEstado(document.querySelector('#estado-perfil'
 const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
 
 const usuarioDaUrl = new URLSearchParams(window.location.search).get('usuario');
-const ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === USUARIO_ATUAL.username;
+let ehMeuPerfil = !usuarioDaUrl;
 
 function montarCartao(usuario) {
     cartao.replaceChildren();
@@ -150,7 +149,8 @@ async function carregarPagina() {
     estadoPublicacoes.carregando('Carregando publicações…');
 
     try {
-        const usuario = await buscarUsuario(usuarioDaUrl ?? USUARIO_ATUAL.username);
+        const usuario = await buscarUsuario(usuarioDaUrl);
+        ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === usuario.username;
 
         document.title = `${usuario.name} | GerminaStack`;
         montarCartao(usuario);

@@ -71,9 +71,9 @@ function montarTitulo(post, destaque) {
 function montarCabecalho(post, destaque) {
     const meta = criarElemento('div', { classe: 'gs-meta' });
     meta.append(
-        criarElemento('a', {
+        criarElemento(post.author.username ? 'a' : 'span', {
             texto: post.author.name,
-            atributos: { href: `/perfil?usuario=${post.author.username}` }
+            atributos: post.author.username ? { href: `/perfil?usuario=${post.author.username}` } : {}
         }),
         criarElemento('time', {
             texto: formatarDataRelativa(post.created_at),
@@ -164,7 +164,7 @@ export function criarCartaoDePost(post, { minhaReacao = null, destaque = false }
                 // alternativo. Sem esse dado, alt="" é o menos ruim: o leitor de
                 // tela pula a imagem em vez de soletrar uma URL. Quando o back
                 // adicionar a coluna, é aqui que ela entra.
-                alt: '',
+                alt: post.image_description ?? '',
                 loading: 'lazy'
             }
         });

@@ -59,7 +59,7 @@ async function requisitar(caminho, opcoes = {}) {
             headers: { 'Content-Type': 'application/json', ...opcoes.headers }
         });
 
-        if (resposta.status === 401) {
+        if (resposta.status === 401 && !caminho.startsWith('/api/login')) {
             encerrarSessao();
             throw new ErroDeApi('Sessão expirada.', 401);
         }
@@ -90,8 +90,13 @@ export async function listarPosts({ idSubject } = {}) {
         return POSTS_LOCAIS.filter((post) => post.subject.id === idSubject);
     }
 
-    const query = idSubject ? `?id_subject=${idSubject}` : '';
-    return requisitar(`/api/posts${query}`);
+    const query = idSubject ? `?subject_id=${idSubject}` : '';
+    const [posts, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts${query}`),
+        listarMaterias(),
+        buscarMeuPerfil()
+    ]);
+    return posts.map((post) => normalizarPost(post, materias, usuario));
 }
 
 /** Devolve a lista de matérias disponíveis para filtro. */
@@ -107,7 +112,12 @@ export async function buscarPost(id) {
         if (!post) throw new ErroDeApi('Publicação não encontrada.', 404);
         return post;
     }
-    return requisitar(`/api/posts/${id}`);
+    const [post, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts/${id}`),
+        listarMaterias(),
+        buscarMeuPerfil()
+    ]);
+    return normalizarPost(post, materias, usuario);
 }
 
 /** Cria uma publicação e devolve o registro salvo. */
@@ -132,16 +142,25 @@ export async function criarPost(dados) {
         return novoPost;
     }
 
-    return requisitar('/api/posts', {
+    const post = await requisitar('/api/posts', {
         method: 'POST',
         body: JSON.stringify(dados)
     });
+    return normalizarPost(post, await listarMaterias(), await buscarMeuPerfil());
 }
 
 /** Devolve os comentários de uma publicação, já com as respostas aninhadas. */
 export async function listarComentarios(idPost) {
     if (USAR_DADOS_LOCAIS) return COMENTARIOS_LOCAIS[Number(idPost)] ?? [];
-    return requisitar(`/api/posts/${idPost}/comments`);
+    const [comentarios, usuario] = await Promise.all([
+        requisitar(`/api/posts/${idPost}/comments`),
+        buscarMeuPerfil()
+    ]);
+    return Promise.all(comentarios.map(async (comentario) => ({
+        ...normalizarMensagem(comentario, usuario),
+        replies: (await requisitar(`/api/comments/${comentario.id}/replies`))
+            .map((resposta) => normalizarMensagem(resposta, usuario))
+    })));
 }
 
 /** Autentica o usuário. O token volta em cookie definido pelo servidor. */
@@ -185,7 +204,12 @@ export async function cadastrar(dados) {
 
     return requisitar('/api/users', {
         method: 'POST',
-        body: JSON.stringify(dados)
+        body: JSON.stringify({
+            email: dados.email,
+            year_id: dados.year_id ?? dados.id_year,
+            password: dados.password,
+            password_confirmation: dados.password_confirmation ?? dados.password
+        })
     });
 }
 
@@ -202,7 +226,11 @@ export async function buscarUsuario(username) {
         if (!usuario) throw new ErroDeApi('Usuário não encontrado.', 404);
         return usuario;
     }
-    return requisitar(`/api/users/${encodeURIComponent(username)}`);
+    const [usuario, anos] = await Promise.all([buscarMeuPerfil(), listarAnos()]);
+    if (username && username !== usuario.username) {
+        throw new ErroDeApi('Perfil público ainda não está disponível nesta API.', 404);
+    }
+    return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
 /** Devolve as publicações escritas por um usuário. */
@@ -210,7 +238,12 @@ export async function listarPostsDoAutor(idAutor) {
     if (USAR_DADOS_LOCAIS) {
         return POSTS_LOCAIS.filter((post) => post.author.id === Number(idAutor));
     }
-    return requisitar(`/api/users/${idAutor}/posts`);
+    const [posts, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts?author_id=${idAutor}`),
+        listarMaterias(),
+        buscarMeuPerfil()
+    ]);
+    return posts.map((post) => normalizarPost(post, materias, usuario));
 }
 
 /**
@@ -231,7 +264,7 @@ export async function marcarNotificacoesComoLidas() {
         return null;
     }
 
-    return requisitar('/api/notifications/read', { method: 'POST' });
+    return requisitar('/api/notifications/read-all', { method: 'PATCH' });
 }
 
 /**
@@ -255,16 +288,26 @@ export async function reagir({ tipo, id, reacao }) {
         return deltas;
     }
 
-    return requisitar('/api/reactions', {
-        method: 'POST',
-        body: JSON.stringify({ message_type: tipo, id_message: id, reaction_type: reacao })
+    const recurso = { post: 'posts', comment: 'comments', comment_on_comment: 'replies' }[tipo];
+    const chave = `${tipo}:${id}`;
+    const anterior = reacoesDaSessao.get(chave) ?? null;
+    await requisitar(`/api/${recurso}/${id}/reaction`, {
+        method: 'PUT',
+        body: JSON.stringify({ reaction_type: reacao })
     });
+    const atual = anterior === reacao ? null : reacao;
+    reacoesDaSessao.set(chave, atual);
+    return {
+        reacao: atual,
+        likes: (atual === 'like' ? 1 : 0) - (anterior === 'like' ? 1 : 0),
+        dislikes: (atual === 'dislike' ? 1 : 0) - (anterior === 'dislike' ? 1 : 0)
+    };
 }
 
 /** Devolve a reação do usuário logado para um alvo, ou null. */
 export async function buscarMinhaReacao(tipo, id) {
     if (USAR_DADOS_LOCAIS) return reacaoAtual(tipo, id);
-    return requisitar(`/api/reactions?message_type=${tipo}&id_message=${id}`);
+    return reacoesDaSessao.get(`${tipo}:${id}`) ?? null;
 }
 
 /**
@@ -312,21 +355,62 @@ export async function criarComentario({ tipo, idPai, content }) {
         ? `/api/posts/${idPai}/comments`
         : `/api/comments/${idPai}/replies`;
 
-    return requisitar(rota, { method: 'POST', body: JSON.stringify({ content }) });
+    const comentario = await requisitar(rota, { method: 'POST', body: JSON.stringify({ content }) });
+    return normalizarMensagem(comentario, await buscarMeuPerfil());
 }
 
 /** Devolve as preferências de acessibilidade do usuário logado. */
 export async function buscarPreferencias() {
     if (USAR_DADOS_LOCAIS) return PREFERENCIAS_LOCAIS;
-    return requisitar('/api/preferences');
+    return requisitar('/api/me/preferences');
 }
 
 /** Salva as preferências de acessibilidade do usuário logado. */
 export async function salvarPreferencias(preferencias) {
     if (USAR_DADOS_LOCAIS) return gravarPreferenciasLocais(preferencias);
 
-    return requisitar('/api/preferences', {
-        method: 'PUT',
+    return requisitar('/api/me/preferences', {
+        method: 'PATCH',
         body: JSON.stringify(preferencias)
+    });
+}
+
+let perfilAtual;
+const reacoesDaSessao = new Map();
+
+async function buscarMeuPerfil() {
+    perfilAtual ??= requisitar('/api/me').catch((erro) => {
+        perfilAtual = null;
+        throw erro;
+    });
+    return perfilAtual;
+}
+
+function normalizarAutor(id, usuario) {
+    if (id === usuario.id) return usuario;
+    return { id, name: `Usuário #${id}`, username: null };
+}
+
+function normalizarMensagem(item, usuario) {
+    return { ...item, author: normalizarAutor(item.id_user, usuario) };
+}
+
+function normalizarPost(post, materias, usuario) {
+    return {
+        ...post,
+        author: normalizarAutor(post.id_user, usuario),
+        subject: materias.find((materia) => materia.id === post.id_subject) ?? {
+            id: post.id_subject,
+            subject: 'Matéria'
+        },
+        comments_count: post.comments_count ?? 0
+    };
+}
+
+export async function completarLogin(dados) {
+    if (USAR_DADOS_LOCAIS) return null;
+    return requisitar('/api/login/2fa', {
+        method: 'POST',
+        body: JSON.stringify(dados)
     });
 }

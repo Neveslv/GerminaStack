@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
@@ -80,6 +81,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 	case errors.Is(err, database.ErrYearNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "ano n\u00e3o encontrado"})
 	default:
+		log.Printf("user registration failed: %v", err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": auth.ErrUnavailable.Error()})
 	}
 }

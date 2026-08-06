@@ -7,38 +7,15 @@ const formulario = document.querySelector('#form-cadastro');
 const seletorAno = document.querySelector('#ano');
 const estado = criarPainelDeEstado(document.querySelector('#estado-cadastro'));
 
-/**
- * O `username` vira menção com @ nos posts, e o trigger `notify_mentions` do
- * banco captura menções com o padrão `@([a-zA-Z0-9_]+)`. Um usuário com ponto
- * ou acento seria cadastrado sem erro e depois nunca receberia notificação:
- * a regra é a mesma dos dois lados para o problema não aparecer só em produção.
- */
-const PADRAO_USUARIO = /^[a-zA-Z0-9_]+$/;
-
 const REGRAS = [
-    {
-        campo: 'nome',
-        erro: 'erro-nome',
-        validar: (valor) => (valor ? '' : 'Informe seu nome completo.')
-    },
-    {
-        campo: 'usuario',
-        erro: 'erro-usuario',
-        validar: (valor) => {
-            if (!valor) return 'Escolha um nome de usuário.';
-            if (valor.length < 3) return 'O usuário precisa ter pelo menos 3 caracteres.';
-            if (!PADRAO_USUARIO.test(valor)) {
-                return 'Use só letras sem acento, números e traço baixo (_).';
-            }
-            return '';
-        }
-    },
     {
         campo: 'email',
         erro: 'erro-email',
         validar: (valor) => {
             if (!valor) return 'Informe seu e-mail.';
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) return 'Esse e-mail não parece válido.';
+            if (!/^[a-z]+\.[a-z]+@institutojef\.org\.br$/.test(valor)) {
+                return 'Use seu e-mail institucional no formato nome.sobrenome@institutojef.org.br.';
+            }
             return '';
         }
     },
@@ -128,16 +105,15 @@ formulario.addEventListener('submit', async (evento) => {
 
     try {
         await cadastrar({
-            name: document.querySelector('#nome').value.trim(),
-            username: document.querySelector('#usuario').value.trim(),
             email: document.querySelector('#email').value.trim(),
-            id_year: Number(seletorAno.value),
-            password: document.querySelector('#senha').value
+            year_id: Number(seletorAno.value),
+            password: document.querySelector('#senha').value,
+            password_confirmation: document.querySelector('#confirmar-senha').value
         });
 
         window.GerminaStackUI?.showToast({
             title: 'Conta criada',
-            message: 'Agora é só entrar com seu usuário e senha.',
+            message: 'Agora é só entrar com seu e-mail e senha.',
             tone: 'success'
         });
 
@@ -146,13 +122,11 @@ formulario.addEventListener('submit', async (evento) => {
         estado.erro(erro.message, 'Confira os dados e tente de novo.');
         botao.disabled = false;
 
-        // 409 é o conflito de UNIQUE em username/email: dá para apontar o campo.
         if (erro.status === 409) {
-            const usuario = document.querySelector('#usuario');
-            document.querySelector('#erro-usuario').textContent =
-                'Esse usuário ou e-mail já está em uso.';
-            usuario.setAttribute('aria-invalid', 'true');
-            usuario.focus();
+            const email = document.querySelector('#email');
+            document.querySelector('#erro-email').textContent = 'Esse e-mail já está em uso.';
+            email.setAttribute('aria-invalid', 'true');
+            email.focus();
         }
     }
 });

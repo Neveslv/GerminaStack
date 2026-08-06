@@ -42,10 +42,11 @@ func NewPostgresDiscussionRepository(db *sql.DB) *PostgresDiscussionRepository {
 }
 
 func (r *PostgresDiscussionRepository) GetPost(ctx context.Context, postID int64) (model.Post, error) {
-	const query = `SELECT id, id_user, id_subject, title, image_url, image_description, content, likes, dislikes, created_at
-FROM posts WHERE id = $1`
+	const query = `SELECT p.id, p.id_user, p.id_subject, p.title, p.image_url, p.image_description, p.content, p.likes, p.dislikes,
+       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), p.created_at
+FROM posts p WHERE p.id = $1`
 	var post model.Post
-	err := r.db.QueryRowContext(ctx, query, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CommentsCount, &post.CreatedAt)
 	return post, discussionReadError("get post", err)
 }
 
@@ -61,10 +62,13 @@ func (r *PostgresDiscussionRepository) CreatePost(ctx context.Context, userID in
 func (r *PostgresDiscussionRepository) UpdatePost(ctx context.Context, postID int64, input PostInput) (model.Post, error) {
 	const query = `UPDATE posts SET id_subject = $1, title = $2, image_url = $3, image_description = $4, content = $5
 WHERE id = $6
-RETURNING id, id_user, id_subject, title, image_url, image_description, content, likes, dislikes, created_at`
-	var post model.Post
-	err := r.db.QueryRowContext(ctx, query, input.SubjectID, input.Title, input.ImageURL, input.ImageDescription, input.Content, postID).Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CreatedAt)
-	return post, discussionMutationReadError("update post", err)
+RETURNING id`
+	var updatedID int64
+	err := r.db.QueryRowContext(ctx, query, input.SubjectID, input.Title, input.ImageURL, input.ImageDescription, input.Content, postID).Scan(&updatedID)
+	if err != nil {
+		return model.Post{}, discussionMutationReadError("update post", err)
+	}
+	return r.GetPost(ctx, updatedID)
 }
 
 func (r *PostgresDiscussionRepository) DeletePost(ctx context.Context, postID int64) error {
@@ -130,21 +134,22 @@ func (r *PostgresDiscussionRepository) DeleteReply(ctx context.Context, replyID 
 }
 
 func (r *PostgresDiscussionRepository) ListPosts(ctx context.Context, filter PostFilter) ([]model.Post, error) {
-	query := `SELECT id, id_user, id_subject, title, image_url, image_description, content, likes, dislikes, created_at
-FROM posts`
+	query := `SELECT p.id, p.id_user, p.id_subject, p.title, p.image_url, p.image_description, p.content, p.likes, p.dislikes,
+       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), p.created_at
+FROM posts p`
 	args := make([]any, 0, 4)
 	switch {
 	case filter.SubjectID != nil && filter.AuthorID != nil:
-		query += ` WHERE id_subject = $1 AND id_user = $2`
+		query += ` WHERE p.id_subject = $1 AND p.id_user = $2`
 		args = append(args, *filter.SubjectID, *filter.AuthorID)
 	case filter.SubjectID != nil:
-		query += ` WHERE id_subject = $1`
+		query += ` WHERE p.id_subject = $1`
 		args = append(args, *filter.SubjectID)
 	case filter.AuthorID != nil:
-		query += ` WHERE id_user = $1`
+		query += ` WHERE p.id_user = $1`
 		args = append(args, *filter.AuthorID)
 	}
-	query += fmt.Sprintf(` ORDER BY created_at DESC, id DESC LIMIT $%d OFFSET $%d`, len(args)+1, len(args)+2)
+	query += fmt.Sprintf(` ORDER BY p.created_at DESC, p.id DESC LIMIT $%d OFFSET $%d`, len(args)+1, len(args)+2)
 	args = append(args, filter.Pagination.PageSize, pageOffset(filter.Pagination))
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -155,7 +160,7 @@ FROM posts`
 	posts := make([]model.Post, 0)
 	for rows.Next() {
 		var post model.Post
-		if err := rows.Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CreatedAt); err != nil {
+		if err := rows.Scan(&post.ID, &post.UserID, &post.SubjectID, &post.Title, &post.ImageURL, &post.ImageDescription, &post.Content, &post.Likes, &post.Dislikes, &post.CommentsCount, &post.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan post: %w", err)
 		}
 		posts = append(posts, post)

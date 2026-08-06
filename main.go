@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -33,7 +34,7 @@ func (systemClock) Now() time.Time {
 
 func main() {
 	if err := run(); err != nil {
-		log.Print("application terminated due to an initialization or runtime error")
+		log.Printf("application terminated due to an initialization or runtime error: %v", err)
 		os.Exit(1)
 	}
 }
@@ -56,7 +57,7 @@ func run() error {
 	migrationContext, cancelMigration := context.WithTimeout(rootContext, migrationTimeout)
 	defer cancelMigration()
 	if err := database.Migrate(migrationContext, db); err != nil {
-		return errors.New("database migration failed")
+		return fmt.Errorf("database migration failed: %w", err)
 	}
 
 	mailer, err := auth.NewSMTPMailer(cfg.SMTP)

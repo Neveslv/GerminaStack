@@ -35,6 +35,9 @@ func TestLoadReadsRequiredConfiguration(t *testing.T) {
 	if cfg.SMTP.Host != "smtp.example.com" || cfg.SMTP.Port != 587 || cfg.SMTP.FromName != "GerminaStack" {
 		t.Fatalf("SMTP = %#v", cfg.SMTP)
 	}
+	if cfg.Frok.APIKey != "" || cfg.Frok.Model != "openai/gpt-oss-20b" || cfg.Frok.Timeout != 30*time.Second {
+		t.Fatalf("Frok = %#v", cfg.Frok)
+	}
 }
 
 func TestLoadDefaultsCookieSecureAndHTTPAddress(t *testing.T) {
@@ -111,6 +114,16 @@ func TestLoadRejectsInvalidPortAndCookieBoolean(t *testing.T) {
 			t.Setenv("AUTH_OPERATION_TIMEOUT", value)
 			if _, err := Load(); err == nil {
 				t.Fatal("Load() error = nil, want invalid operation timeout")
+			}
+		})
+	}
+	for _, value := range []string{"not-a-duration", "0s", "-1s"} {
+		value := value
+		t.Run("Frok timeout "+value, func(t *testing.T) {
+			setValidEnvironment(t)
+			t.Setenv("FROK_TIMEOUT", value)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid Frok timeout")
 			}
 		})
 	}

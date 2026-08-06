@@ -36,8 +36,8 @@ FROM posts p JOIN users u ON u.id = p.id_user WHERE p.id_subject = $1 AND p.id_u
 func TestPostgresDiscussionRepositoryReturnsEmptyReadLists(t *testing.T) {
 	t.Parallel()
 	db, mock := newCatalogMock(t)
-	mock.ExpectQuery("SELECT id, id_post, id_user, content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "content", "likes", "dislikes", "created_at"}))
-	mock.ExpectQuery("SELECT id, id_comment, id_user, content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_comment", "id_user", "content", "likes", "dislikes", "created_at"}))
+	mock.ExpectQuery("SELECT c.id, c.id_post, c.id_user, c.content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "content", "likes", "dislikes", "author_name", "author_username", "created_at"}))
+	mock.ExpectQuery("SELECT c.id, c.id_comment, c.id_user, c.content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_comment", "id_user", "content", "likes", "dislikes", "author_name", "author_username", "created_at"}))
 	mock.ExpectQuery("SELECT id, id_post, id_user, text_show").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "text_show", "is_read", "created_at"}))
 	repository := NewPostgresDiscussionRepository(db)
 	pagination := Pagination{Page: 1, PageSize: 20}

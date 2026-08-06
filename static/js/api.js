@@ -392,7 +392,7 @@ function normalizarAutor(id, usuario, name, username) {
 }
 
 function normalizarMensagem(item, usuario) {
-    return { ...item, author: normalizarAutor(item.id_user, usuario) };
+    return { ...item, author: normalizarAutor(item.id_user, usuario, item.author_name, item.author_username) };
 }
 
 function normalizarPost(post, materias, usuario) {

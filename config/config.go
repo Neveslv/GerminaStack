@@ -21,6 +21,13 @@ type Config struct {
 	HTTPAddr             string
 	AuthOperationTimeout time.Duration
 	SMTP                 auth.SMTPConfig
+	Frok                 FrokConfig
+}
+
+type FrokConfig struct {
+	APIKey  string
+	Model   string
+	Timeout time.Duration
 }
 
 func Load() (Config, error) {
@@ -88,6 +95,18 @@ func Load() (Config, error) {
 		}
 		authOperationTimeout = parsed
 	}
+	frokTimeout := 30 * time.Second
+	if value := strings.TrimSpace(os.Getenv("FROK_TIMEOUT")); value != "" {
+		parsed, err := time.ParseDuration(value)
+		if err != nil || parsed <= 0 {
+			return Config{}, errors.New("FROK_TIMEOUT is invalid")
+		}
+		frokTimeout = parsed
+	}
+	frokModel := strings.TrimSpace(os.Getenv("FROK_MODEL"))
+	if frokModel == "" {
+		frokModel = "openai/gpt-oss-20b"
+	}
 
 	smtpConfig := auth.SMTPConfig{
 		Host:        smtpHost,
@@ -110,6 +129,11 @@ func Load() (Config, error) {
 		HTTPAddr:             httpAddr,
 		AuthOperationTimeout: authOperationTimeout,
 		SMTP:                 smtpConfig,
+		Frok: FrokConfig{
+			APIKey:  strings.TrimSpace(os.Getenv("GROQ_API_KEY")),
+			Model:   frokModel,
+			Timeout: frokTimeout,
+		},
 	}, nil
 }
 

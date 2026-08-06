@@ -76,10 +76,10 @@ func (r *PostgresDiscussionRepository) DeletePost(ctx context.Context, postID in
 }
 
 func (r *PostgresDiscussionRepository) GetComment(ctx context.Context, commentID int64) (model.Comment, error) {
-	const query = `SELECT id, id_post, id_user, content, likes, dislikes, created_at
-FROM comments WHERE id = $1`
+	const query = `SELECT c.id, c.id_post, c.id_user, c.content, c.likes, c.dislikes, u.name, u.username, c.created_at
+FROM comments c JOIN users u ON u.id = c.id_user WHERE c.id = $1`
 	var comment model.Comment
-	err := r.db.QueryRowContext(ctx, query, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.AuthorName, &comment.AuthorUsername, &comment.CreatedAt)
 	return comment, discussionReadError("get comment", err)
 }
 
@@ -93,11 +93,13 @@ func (r *PostgresDiscussionRepository) CreateComment(ctx context.Context, userID
 }
 
 func (r *PostgresDiscussionRepository) UpdateComment(ctx context.Context, commentID int64, input CommentInput) (model.Comment, error) {
-	const query = `UPDATE comments SET content = $1 WHERE id = $2
-RETURNING id, id_post, id_user, content, likes, dislikes, created_at`
-	var comment model.Comment
-	err := r.db.QueryRowContext(ctx, query, input.Content, commentID).Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.CreatedAt)
-	return comment, discussionMutationReadError("update comment", err)
+	const query = `UPDATE comments SET content = $1 WHERE id = $2 RETURNING id`
+	var updatedID int64
+	err := r.db.QueryRowContext(ctx, query, input.Content, commentID).Scan(&updatedID)
+	if err != nil {
+		return model.Comment{}, discussionMutationReadError("update comment", err)
+	}
+	return r.GetComment(ctx, updatedID)
 }
 
 func (r *PostgresDiscussionRepository) DeleteComment(ctx context.Context, commentID int64) error {
@@ -105,10 +107,10 @@ func (r *PostgresDiscussionRepository) DeleteComment(ctx context.Context, commen
 }
 
 func (r *PostgresDiscussionRepository) GetReply(ctx context.Context, replyID int64) (model.CommentOnComment, error) {
-	const query = `SELECT id, id_comment, id_user, content, likes, dislikes, created_at
-FROM comments_on_comments WHERE id = $1`
+	const query = `SELECT c.id, c.id_comment, c.id_user, c.content, c.likes, c.dislikes, u.name, u.username, c.created_at
+FROM comments_on_comments c JOIN users u ON u.id = c.id_user WHERE c.id = $1`
 	var reply model.CommentOnComment
-	err := r.db.QueryRowContext(ctx, query, replyID).Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.CreatedAt)
+	err := r.db.QueryRowContext(ctx, query, replyID).Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.AuthorName, &reply.AuthorUsername, &reply.CreatedAt)
 	return reply, discussionReadError("get reply", err)
 }
 
@@ -122,11 +124,13 @@ func (r *PostgresDiscussionRepository) CreateReply(ctx context.Context, userID, 
 }
 
 func (r *PostgresDiscussionRepository) UpdateReply(ctx context.Context, replyID int64, input CommentInput) (model.CommentOnComment, error) {
-	const query = `UPDATE comments_on_comments SET content = $1 WHERE id = $2
-RETURNING id, id_comment, id_user, content, likes, dislikes, created_at`
-	var reply model.CommentOnComment
-	err := r.db.QueryRowContext(ctx, query, input.Content, replyID).Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.CreatedAt)
-	return reply, discussionMutationReadError("update reply", err)
+	const query = `UPDATE comments_on_comments SET content = $1 WHERE id = $2 RETURNING id`
+	var updatedID int64
+	err := r.db.QueryRowContext(ctx, query, input.Content, replyID).Scan(&updatedID)
+	if err != nil {
+		return model.CommentOnComment{}, discussionMutationReadError("update reply", err)
+	}
+	return r.GetReply(ctx, updatedID)
 }
 
 func (r *PostgresDiscussionRepository) DeleteReply(ctx context.Context, replyID int64) error {
@@ -172,10 +176,10 @@ FROM posts p JOIN users u ON u.id = p.id_user`
 }
 
 func (r *PostgresDiscussionRepository) ListComments(ctx context.Context, postID int64, pagination Pagination) ([]model.Comment, error) {
-	const query = `SELECT id, id_post, id_user, content, likes, dislikes, created_at
-FROM comments
-WHERE id_post = $1
-ORDER BY created_at DESC, id DESC
+	const query = `SELECT c.id, c.id_post, c.id_user, c.content, c.likes, c.dislikes, u.name, u.username, c.created_at
+FROM comments c JOIN users u ON u.id = c.id_user
+WHERE c.id_post = $1
+ORDER BY c.created_at DESC, c.id DESC
 LIMIT $2 OFFSET $3`
 	rows, err := r.db.QueryContext(ctx, query, postID, pagination.PageSize, pageOffset(pagination))
 	if err != nil {
@@ -185,7 +189,7 @@ LIMIT $2 OFFSET $3`
 	comments := make([]model.Comment, 0)
 	for rows.Next() {
 		var comment model.Comment
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.CreatedAt); err != nil {
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.Likes, &comment.Dislikes, &comment.AuthorName, &comment.AuthorUsername, &comment.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan comment: %w", err)
 		}
 		comments = append(comments, comment)
@@ -197,10 +201,10 @@ LIMIT $2 OFFSET $3`
 }
 
 func (r *PostgresDiscussionRepository) ListReplies(ctx context.Context, commentID int64, pagination Pagination) ([]model.CommentOnComment, error) {
-	const query = `SELECT id, id_comment, id_user, content, likes, dislikes, created_at
-FROM comments_on_comments
-WHERE id_comment = $1
-ORDER BY created_at DESC, id DESC
+	const query = `SELECT c.id, c.id_comment, c.id_user, c.content, c.likes, c.dislikes, u.name, u.username, c.created_at
+FROM comments_on_comments c JOIN users u ON u.id = c.id_user
+WHERE c.id_comment = $1
+ORDER BY c.created_at DESC, c.id DESC
 LIMIT $2 OFFSET $3`
 	rows, err := r.db.QueryContext(ctx, query, commentID, pagination.PageSize, pageOffset(pagination))
 	if err != nil {
@@ -210,7 +214,7 @@ LIMIT $2 OFFSET $3`
 	replies := make([]model.CommentOnComment, 0)
 	for rows.Next() {
 		var reply model.CommentOnComment
-		if err := rows.Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.CreatedAt); err != nil {
+		if err := rows.Scan(&reply.ID, &reply.CommentID, &reply.UserID, &reply.Content, &reply.Likes, &reply.Dislikes, &reply.AuthorName, &reply.AuthorUsername, &reply.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan reply: %w", err)
 		}
 		replies = append(replies, reply)

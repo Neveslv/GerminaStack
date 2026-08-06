@@ -74,7 +74,7 @@ func TestUserJSONUsesSnakeCaseAndHidesPassword(t *testing.T) {
 	const secret = "valor-ultrassecreto-9f53"
 
 	user := User{
-		YearID:                  7,
+		YearID:                  pointerTo(int64(7)),
 		ProfileImageURL:         stringPointer("profile.png"),
 		ProfileImageDescription: stringPointer("Foto de perfil"),
 		Username:                "aluna",

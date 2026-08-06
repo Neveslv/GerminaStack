@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -23,5 +24,24 @@ func (post Post) Validate() error {
 		return errors.New("imagem do post e descrição devem ser informadas juntas")
 	}
 
+	return nil
+}
+
+func (post Post) ValidateForCreate() error {
+	if err := post.Validate(); err != nil {
+		return err
+	}
+	if post.UserID <= 0 {
+		return errors.New("post user must be positive")
+	}
+	if post.SubjectID <= 0 {
+		return errors.New("post subject must be positive")
+	}
+	if strings.TrimSpace(post.Title) == "" {
+		return errors.New("post title cannot be empty")
+	}
+	if strings.TrimSpace(post.Content) == "" {
+		return errors.New("post content cannot be empty")
+	}
 	return nil
 }

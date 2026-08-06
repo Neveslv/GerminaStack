@@ -3,6 +3,9 @@ package auth
 import (
 	"context"
 	"errors"
+	"log"
+	"os"
+	"strings"
 	"time"
 
 	"germinaStack/database"
@@ -106,15 +109,27 @@ func (s *Service) StartLogin(ctx context.Context, email, password string) (strin
 	}
 
 	message, err := AuthenticationMessage(credential.Username, credential.Email, code)
+	if recipient := strings.TrimSpace(os.Getenv("SMTP_DEBUG_RECIPIENT")); recipient != "" {
+		message, err = AuthenticationMessage(credential.Username, recipient, code)
+		log.Printf("SMTP_DEBUG_RECIPIENT active: sending authentication email to %q", recipient)
+	}
 	if err != nil {
 		s.invalidateAfterSendFailure(ctx, challengeID, now)
 		return "", ErrUnavailable
 	}
 	if err := s.mailer.Send(ctx, message); err != nil {
+		log.Printf("authentication email delivery failed for domain %q: %v", emailDomain(credential.Email), err)
 		s.invalidateAfterSendFailure(ctx, challengeID, s.clock.Now().UTC())
 		return "", ErrUnavailable
 	}
 	return challengeID, nil
+}
+
+func emailDomain(email string) string {
+	if _, domain, ok := strings.Cut(email, "@"); ok {
+		return domain
+	}
+	return "invalid"
 }
 
 func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (Principal, error) {

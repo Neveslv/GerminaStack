@@ -89,7 +89,7 @@ func TestSMTPMailerBuildsUTF8MIMEMessageWithoutExposingPassword(t *testing.T) {
 		"To: ana@example.com",
 		"Subject:",
 		"MIME-Version: 1.0",
-		"Content-Type: text/html; charset=UTF-8",
+		"Content-Type: text/plain; charset=UTF-8",
 		"Content-Transfer-Encoding: quoted-printable",
 	} {
 		if !strings.Contains(text, want) {

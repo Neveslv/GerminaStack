@@ -1,5 +1,3 @@
-/** Formatação de datas vindas da API. */
-
 const FUSO_ESCOLA = 'America/Sao_Paulo';
 
 const formatadorLongo = new Intl.DateTimeFormat('pt-BR', {
@@ -19,12 +17,10 @@ const ESCALAS = [
     { unidade: 'minute', segundos: 60 }
 ];
 
-/** Devolve a data por extenso, ex.: "02 de julho de 2026". */
 export function formatarDataCompleta(iso) {
     return formatadorLongo.format(new Date(iso));
 }
 
-/** Devolve a distância até agora, ex.: "há 3 dias". */
 export function formatarDataRelativa(iso) {
     const segundos = (new Date(iso).getTime() - Date.now()) / 1000;
 

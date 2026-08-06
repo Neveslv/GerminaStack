@@ -1,11 +1,3 @@
-/**
- * Comentários e respostas da página de publicação.
- *
- * Os dois níveis espelham as tabelas `comments` e `comments_on_comments`.
- * O banco não tem terceiro nível, então uma resposta não ganha botão de
- * responder — o front não oferece o que o banco não guarda.
- */
-
 import { criarElemento } from '../utils/dom.js';
 import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
@@ -40,7 +32,6 @@ function criarBolha(item, classeBolha) {
     return bolha;
 }
 
-/** Monta uma resposta (tabela `comments_on_comments`). */
 export function criarResposta(resposta, minhaReacao = null) {
     const conteudo = criarElemento('div', { classe: 'gs-reply-content' });
     conteudo.append(criarBolha(resposta, 'gs-reply-bubble'));
@@ -68,11 +59,6 @@ export function criarResposta(resposta, minhaReacao = null) {
     return item;
 }
 
-/**
- * Formulário de resposta que abre embaixo de um comentário.
- * Fica escondido até a pessoa pedir, para a thread não virar uma parede
- * de campos de texto para quem navega por teclado ou leitor de tela.
- */
 function criarFormularioDeResposta(idComentario, aoEnviar) {
     const formulario = criarElemento('form', {
         classe: 'gs-inline-form',

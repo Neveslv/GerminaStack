@@ -1,12 +1,3 @@
-/**
- * Página de acessibilidade: escolhe contrast_theme, font_family, font_spacing
- * e font_size — os quatro campos da tabela `preferences`.
- *
- * A escolha vale na hora, antes de salvar. É proposital: comparar contraste
- * de cabeça não funciona: quem precisa do recurso precisa VER o resultado
- * para decidir. O botão de salvar só grava o que já está na tela.
- */
-
 import { buscarPreferencias, salvarPreferencias } from '../api.js';
 import {
     aplicarPreferencias,
@@ -16,7 +7,6 @@ import {
 } from '../utils/preferencias.js';
 import { criarPainelDeEstado } from '../utils/dom.js';
 
-/** Os quatro campos de `preferences`, na ordem em que aparecem no formulário. */
 const CAMPOS = ['contrast_theme', 'font_family', 'font_spacing', 'font_size'];
 
 const formulario = document.querySelector('#form-preferencias');
@@ -24,7 +14,6 @@ const botaoSalvar = document.querySelector('#salvar');
 const botaoRestaurar = document.querySelector('#restaurar');
 const estado = criarPainelDeEstado(document.querySelector('#estado-preferencias'));
 
-/** Preferências salvas no servidor — usadas para saber se há mudança pendente. */
 let salvasNoServidor = { ...PREFERENCIAS_PADRAO };
 
 function lerFormulario() {
@@ -52,14 +41,11 @@ function atualizarBotaoSalvar() {
     botaoSalvar.textContent = pendente ? 'Salvar preferências' : 'Preferências salvas';
 }
 
-/** Pré-visualiza sem gravar: aplica no <html> e espelha no localStorage. */
 function pre_visualizar() {
     const escolha = lerFormulario();
 
     aplicarPreferencias(escolha);
 
-    // O espelho local é atualizado junto para a pessoa poder navegar para
-    // outra página e continuar vendo o que escolheu, mesmo sem ter salvo.
     guardarPreferenciasLocais(escolha);
 
     atualizarBotaoSalvar();
@@ -107,8 +93,6 @@ formulario.addEventListener('submit', async (evento) => {
 });
 
 async function carregarPagina() {
-    // Começa pelo espelho local para o formulário já abrir marcado igual ao
-    // que a tela está mostrando — o tema-inicial.js aplicou esse valor.
     marcarFormulario(lerPreferenciasLocais());
 
     try {

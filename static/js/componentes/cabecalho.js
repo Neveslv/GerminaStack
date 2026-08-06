@@ -33,11 +33,6 @@ import {
 import { criarElemento } from '../utils/dom.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 
-/**
- * O tema-inicial.js já aplicou o que estava no localStorage antes da primeira
- * pintura. Aqui confirmamos com o banco: se o usuário mudou a preferência em
- * outro dispositivo, o valor do servidor vence e o espelho local é corrigido.
- */
 async function sincronizarPreferencias() {
     try {
         const doServidor = await buscarPreferencias();
@@ -66,8 +61,6 @@ function criarItemDeNotificacao(notificacao) {
 
     const cabecalho = criarElemento('div', { classe: 'gs-meta' });
 
-    // "Nova" é texto, não só a cor de fundo do item: quem não distingue as
-    // cores também precisa saber o que já foi lido (WCAG 1.4.1).
     if (!notificacao.is_read) {
         cabecalho.append(criarElemento('span', { classe: 'gs-badge', texto: 'Nova' }));
     }

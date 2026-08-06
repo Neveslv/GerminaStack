@@ -1,13 +1,3 @@
-/**
- * Botões de curtir e não curtir, ligados à tabela `reactions`.
- *
- * Não usa o `data-gs-like` do kit de propósito. Aquele atributo soma 1 no
- * contador da tela e para por aí — serve para demonstração. Aqui o número
- * precisa vir do banco, então a regra de negócio fica fora do kit, como o
- * próprio README do kit recomenda. O que continua vindo do kit é a aparência:
- * a classe `gs-action` e o estado `data-state="on"`, que já têm estilo pronto.
- */
-
 import { criarElemento } from '../utils/dom.js';
 import { reagir } from '../api.js';
 
@@ -80,13 +70,6 @@ function atualizarBotao(botao, total, ativo) {
     botao.classList.toggle('is-danger', reacao === 'like' && ativo);
 }
 
-/**
- * Monta o par de botões de reação de um post, comentário ou resposta.
- *
- * @param {{ tipo: 'post'|'comment'|'comment_on_comment', id: number,
- *           likes: number, dislikes: number, minhaReacao: string|null }} alvo
- * @returns {HTMLElement} um <div class="gs-cluster"> pronto para ser inserido
- */
 export function criarReacoes({ tipo, id, likes, dislikes, minhaReacao }) {
     const grupo = criarElemento('div', {
         classe: 'gs-cluster',
@@ -104,8 +87,6 @@ export function criarReacoes({ tipo, id, likes, dislikes, minhaReacao }) {
 
         const escolhida = botao.dataset.reacao;
 
-        // Trava os dois botões: um duplo-clique rápido mandaria duas
-        // alternâncias e o contador da tela sairia do valor do banco.
         botaoLike.disabled = true;
         botaoDislike.disabled = true;
 

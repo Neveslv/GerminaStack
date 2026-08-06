@@ -1,12 +1,3 @@
-/**
- * Página de matérias: os canais de dúvidas.
- *
- * A matéria escolhida vai para a query string (?id=), e não só para uma
- * variável em memória. Assim o link do chip de matéria que aparece em cada
- * post funciona, e a pessoa consegue mandar "olha a dúvida de Química" para
- * um colega sem ele cair numa lista genérica.
- */
-
 import { listarMaterias, listarPosts, buscarMinhaReacao } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';

@@ -1,5 +1,3 @@
-/** Pagina de feed: lista publicacoes, filtra por materia e por busca. */
-
 import { listarPosts, listarMaterias, buscarMinhaReacao } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, comAtraso, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
@@ -35,8 +33,6 @@ async function renderizarFeed() {
         return;
     }
 
-    // Em paralelo: uma consulta por post em série deixaria o feed abrindo
-    // aos poucos, e o kit anuncia o total só depois que tudo entra na tela.
     const reacoes = await Promise.all(
         visiveis.map((post) => buscarMinhaReacao('post', post.id))
     );

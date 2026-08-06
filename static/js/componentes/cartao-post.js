@@ -1,5 +1,3 @@
-/** Monta o cartao de uma publicacao usando os blocos gs-post do kit. */
-
 import { criarElemento } from '../utils/dom.js';
 import { corDoAutor, tomDaMateria, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
@@ -135,22 +133,12 @@ function montarRodape(post, minhaReacao) {
     return rodape;
 }
 
-/**
- * Devolve o <article class="gs-post"> completo de uma publicacao.
- *
- * @param {object} post publicação no formato de GET /api/posts
- * @param {{ minhaReacao?: string|null, destaque?: boolean }} opcoes
- *        destaque=true monta a versão da página de detalhe, com <h1>.
- */
 export function criarCartaoDePost(post, { minhaReacao = null, destaque = false } = {}) {
     const artigo = criarElemento('article', {
         classe: 'gs-post',
         atributos: { 'data-post-id': String(post.id) }
     });
 
-    // O kit define .gs-post { overflow: hidden }, o que recorta o painel do menu
-    // de acoes, que e position:absolute e abre para baixo do gatilho. Liberamos o
-    // overflow so neste card para o menu ficar visivel.
     artigo.style.overflow = 'visible';
 
     const corpo = criarElemento('div', { classe: 'gs-post-body' });

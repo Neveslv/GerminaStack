@@ -1,5 +1,3 @@
-/** Pagina de detalhe: mostra a publicacao, a thread de respostas e o formulario. */
-
 import {
     buscarPost,
     listarComentarios,
@@ -85,8 +83,6 @@ function ligarFormularioDeResposta() {
                 content: texto
             });
 
-            // A thread pode estar mostrando o estado de "ninguém respondeu";
-            // a primeira resposta precisa apagar esse aviso.
             estadoRespostas.ocultar();
 
             const novo = montarComentario(comentario);

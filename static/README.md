@@ -14,10 +14,9 @@ static/
 │                                    para dentro da lib, ver seção abaixo
 ├── js/
 │   ├── api.js                    → única porta de saída para o back-end
-│   ├── config.js                 → ambiente, URL base, flag de dados locais
+│   ├── config.js                 → ambiente, URL base, timeout e rota de login
 │   ├── tema-inicial.js           → aplica o tema salvo antes da 1ª pintura
 │   ├── componentes/              → peças de UI reaproveitadas entre páginas
-│   ├── mock/                     → dados de exemplo, um arquivo por tabela do banco
 │   ├── utils/                    → funções puras sem estado de página
 │   └── pages/                    → um arquivo por página em web/, orquestra tudo
 └── vendor/
@@ -152,45 +151,37 @@ na tela de Acessibilidade). A correção —
 `[data-fonte="open_dyslexic"] strong, b { font-weight: 400; }` — agora mora dentro de
 `themes.css`, publicada pela lib.
 
-## `js/config.js` e o modo de dados locais
+## `js/config.js`
 
-```js
-export const USAR_DADOS_LOCAIS = true;
-```
-
-Com essa flag ligada, toda função em `api.js` responde com dados de `js/mock/` em vez de
-chamar o back-end. É a única chave que precisa mudar quando os endpoints do Gin
-estiverem prontos — nenhuma página ou componente sabe que os dados são falsos.
-
-`config.js` também define `API_BASE_URL`, fixo em `http://localhost:8080` (apresentação
-em localhost, sem ambiente de produção por enquanto), e `ROTA_LOGIN` (para onde `api.js`
-redireciona em um 401).
+`config.js` define `API_BASE_URL` (vazio — front e API são servidos pela mesma origem,
+tanto no localhost quanto na Discloud), `TIMEOUT_MS` (tempo máximo de espera por
+resposta) e `ROTA_LOGIN` (para onde `api.js` redireciona em um 401).
 
 ## `js/api.js` — a única porta de saída
 
-Nenhum outro arquivo do projeto chama `fetch` diretamente. Toda função aqui segue o
-mesmo padrão: se `USAR_DADOS_LOCAIS`, resolve contra o mock correspondente; senão, monta
-a chamada real via `requisitar()` (que já cuida de timeout, JSON, cookie de sessão e
-401).
+Nenhum outro arquivo do projeto chama `fetch` diretamente. Toda função aqui monta a
+chamada via `requisitar()` (que já cuida de timeout, JSON, cookie de sessão e 401).
 
-| Função | Tabela/função do banco | Mock usado |
+| Função | Rota | Tabela/função do banco |
 |---|---|---|
-| `listarPosts({ idSubject })` | `posts` (+ `JOIN` users, subjects) | `mock/posts.js` |
-| `buscarPost(id)` | `posts` | `mock/posts.js` |
-| `criarPost(dados)` | `posts` (via `create_message('post', ...)`) | `mock/posts.js` |
-| `listarMaterias()` | `subjects` | `mock/subjects.js` |
-| `listarAnos()` | `years` | `mock/years.js` |
-| `listarComentarios(idPost)` | `comments` + `comments_on_comments` | `mock/comments.js` |
-| `criarComentario({ tipo, idPai, content })` | `comments` / `comments_on_comments` (via `create_message`) | `mock/comments.js` |
-| `entrar(credenciais)` | autenticação (JWT, futuro) | `mock/sessao.js` |
-| `cadastrar(dados)` | `users` | `mock/users.js` |
-| `buscarUsuario(username)` | `users` | `mock/users.js` |
-| `listarPostsDoAutor(idAutor)` | `posts` filtrado por `id_user` | `mock/posts.js` |
-| `listarNotificacoes()` | `notifications` | `mock/notifications.js` |
-| `marcarNotificacoesComoLidas()` | `mark_notifications_as_read(id_user)` | `mock/notifications.js` |
-| `reagir({ tipo, id, reacao })` | `reaction(id_user, id_message, message_type, reaction_type)` | `mock/reactions.js` |
-| `buscarMinhaReacao(tipo, id)` | `reactions` (leitura) | `mock/reactions.js` |
-| `buscarPreferencias()` / `salvarPreferencias(prefs)` | `preferences` | `mock/preferences.js` |
+| `listarPosts({ idSubject })` | `GET /api/posts` | `posts` (+ `JOIN` users, subjects) |
+| `buscarPost(id)` | `GET /api/posts/:id` | `posts` |
+| `criarPost(dados)` | `POST /api/posts` | `posts` (via `create_message('post', ...)`) |
+| `listarMaterias()` | `GET /api/subjects` | `subjects` |
+| `listarAnos()` | `GET /api/years` | `years` |
+| `listarComentarios(idPost)` | `GET /api/posts/:id/comments` (+ `/api/comments/:id/replies`) | `comments` + `comments_on_comments` |
+| `criarComentario({ tipo, idPai, content })` | `POST /api/posts/:id/comments` ou `POST /api/comments/:id/replies` | `comments` / `comments_on_comments` (via `create_message`) |
+| `entrar(credenciais)` | `POST /api/login` | autenticação (JWT) |
+| `completarLogin(dados)` | `POST /api/login/2fa` | autenticação (2º fator) |
+| `sair()` | `POST /api/logout` | autenticação |
+| `cadastrar(dados)` | `POST /api/users` | `users` |
+| `buscarUsuario(username)` | `GET /api/users/:username` (ou `/api/me`) | `users` |
+| `listarPostsDoAutor(idAutor)` | `GET /api/posts?author_id=` | `posts` filtrado por `id_user` |
+| `listarNotificacoes()` | `GET /api/notifications` | `notifications` |
+| `marcarNotificacoesComoLidas()` | `PATCH /api/notifications/read-all` | `mark_notifications_as_read(id_user)` |
+| `reagir({ tipo, id, reacao })` | `PUT /api/{posts\|comments\|replies}/:id/reaction` | `reaction(id_user, id_message, message_type, reaction_type)` |
+| `buscarMinhaReacao(tipo, id)` | — (cache em memória da sessão) | `reactions` (leitura) |
+| `buscarPreferencias()` / `salvarPreferencias(prefs)` | `GET` / `PATCH /api/me/preferences` | `preferences` |
 
 `ErroDeApi` é a única classe de erro que sobe até as páginas — sempre tem `.message`
 (texto para mostrar) e `.status` (código HTTP, quando existir). Um 401 aciona
@@ -198,31 +189,10 @@ a chamada real via `requisitar()` (que já cuida de timeout, JSON, cookie de ses
 
 ### Convenção ao adicionar um endpoint novo
 
-1. Crie (ou reaproveite) o mock em `js/mock/`, no formato exato que o endpoint real vai
-   devolver — comentário no topo do mock explicando de qual tabela ele vem.
-2. Adicione a função em `api.js`, seguindo o padrão `if (USAR_DADOS_LOCAIS) { ... } return requisitar(...)`.
-3. Chame essa função só a partir de `js/pages/` ou `js/componentes/` — nunca duplique a
+1. Adicione a função em `api.js`, montando a chamada com `requisitar(...)` e
+   normalizando o retorno no formato que as páginas esperam.
+2. Chame essa função só a partir de `js/pages/` ou `js/componentes/` — nunca duplique a
    URL/rota em outro lugar.
-
-## `js/mock/` — um arquivo por tabela
-
-Cada arquivo espelha o formato de uma tabela do banco (`GerminaStack.sql`), incluindo os
-relacionamentos já resolvidos como o back-end deve devolver (autor e matéria aninhados
-via `JOIN`, contagem de comentários já calculada). Os ids de autor são consistentes
-entre arquivos — o mesmo `id: 4` é sempre "Ana Ribeiro" em `posts.js`, `comments.js`,
-`users.js` e `sessao.js`, para o app se comportar como se fosse um `JOIN` de verdade.
-
-| Arquivo | Tabela | Observação |
-|---|---|---|
-| `posts.js` | `posts` | Autor e matéria já aninhados; inclui `comments_count` |
-| `comments.js` | `comments` + `comments_on_comments` | Estrutura de dois níveis (`replies`) |
-| `subjects.js` | `subjects` | |
-| `years.js` | `years` | `year` é `text`, não número (ex.: `"2º Tec"`) |
-| `users.js` | `users` | Nunca inclui a coluna `password` |
-| `sessao.js` | — | Usuário "logado" fixo, usado como autor de posts locais |
-| `notifications.js` | `notifications` | `text_show` já vem pronto, como o trigger `notify_mentions` geraria |
-| `preferences.js` | `preferences` | É `let`, não `const` — a API local escreve aqui ao salvar |
-| `reactions.js` | `reactions` | Alternância `like`/`dislike`/remover espelha a função `reaction()` do banco |
 
 ## `js/utils/` — funções sem estado de página
 
@@ -295,7 +265,7 @@ servidor antes de pintar a tela.
   e atributos `data-gs-*` seguem o inglês da lib, sem tradução.
 - **Módulos ES em toda parte, exceto `tema-inicial.js`** e o script da lib (que é
   carregado como clássico de propósito, ver [web/README.md](../web/README.md)).
-- **`textContent`, nunca `innerHTML`, para dado vindo de API ou mock.** Só o próprio kit
+- **`textContent`, nunca `innerHTML`, para dado vindo da API.** Só o próprio kit
   usa `innerHTML` internamente, e apenas para HTML que ele mesmo gera (toasts, popovers).
 - **Cor nunca é o único sinal.** Todo indicador por cor (chip de matéria, badge de não
   lida, estado de curtida) tem também texto ou ícone com `aria-label`.

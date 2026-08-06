@@ -1,17 +1,3 @@
-/**
- * Aplica o tema salvo ANTES da primeira pintura da tela.
- *
- * Este arquivo é carregado como script clássico e sem `defer` no <head>, então
- * ele roda enquanto o <body> ainda nem existe. É de propósito: se o tema fosse
- * aplicado por um módulo (que é sempre adiado), a página apareceria clara por
- * um instante antes de escurecer — e piscar a tela na cara de quem escolheu
- * alto contraste justamente por sensibilidade visual é o pior resultado
- * possível. O custo é ~1ms de bloqueio.
- *
- * A fonte da verdade continua sendo a tabela `preferences`; o localStorage é
- * só um espelho para o carregamento não depender de ida ao servidor.
- */
-
 (function () {
     var CHAVE = 'germinastack:preferencias';
 

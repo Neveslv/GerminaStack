@@ -1,5 +1,3 @@
-/** Página de administração: cria novos perfis de usuário na tabela `users`. */
-
 import { cadastrar, listarAnos } from '../api.js';
 import { criarElemento, criarPainelDeEstado } from '../utils/dom.js';
 
@@ -7,12 +5,6 @@ const formulario = document.querySelector('#form-admin');
 const seletorAno = document.querySelector('#ano');
 const estado = criarPainelDeEstado(document.querySelector('#estado-admin'));
 
-/**
- * O `username` vira menção com @ nos posts, e o trigger `notify_mentions` do
- * banco captura menções com o padrão `@([a-zA-Z0-9_]+)`. Mesma regra usada em
- * cadastro.js, para não abrir uma segunda porta de criação de conta com regras
- * diferentes.
- */
 const PADRAO_USUARIO = /^[a-zA-Z0-9_]+$/;
 
 const REGRAS = [
@@ -74,14 +66,12 @@ function limparErros() {
     });
 }
 
-/** Valida tudo e devolve o primeiro campo inválido, ou null. */
 function validar() {
     let primeiroInvalido = null;
 
     REGRAS.forEach(({ campo, erro, validar: checar }) => {
         const elemento = document.querySelector(`#${campo}`);
 
-        // A senha não passa por trim: espaço no começo ou no fim é parte dela.
         const valor = campo.includes('senha') ? elemento.value : elemento.value.trim();
         const mensagem = checar(valor);
         if (!mensagem) return;
@@ -149,7 +139,6 @@ formulario.addEventListener('submit', async (evento) => {
     } catch (erro) {
         estado.erro(erro.message, 'Confira os dados e tente de novo.');
 
-        // 409 é o conflito de UNIQUE em username/email: dá para apontar o campo.
         if (erro.status === 409) {
             const usuario = document.querySelector('#usuario');
             document.querySelector('#erro-usuario').textContent =

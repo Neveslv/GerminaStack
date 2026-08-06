@@ -1,5 +1,3 @@
-/** Página de cadastro: valida os dados e cria a conta na tabela `users`. */
-
 import { cadastrar, listarAnos } from '../api.js';
 import { criarElemento, criarPainelDeEstado } from '../utils/dom.js';
 

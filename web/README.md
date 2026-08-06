@@ -23,10 +23,8 @@ para a estrutura de `static/`.
 | `login.html` | `/login` | Entrar | `static/js/pages/login.js` | — |
 | `cadastro.html` | `/cadastro` | Criar conta | `static/js/pages/cadastro.js` | — |
 
-\* "Requer login" é o comportamento pretendido quando o back-end tiver autenticação
-JWT ligada às rotas. Hoje, com `USAR_DADOS_LOCAIS = true` em `static/js/config.js`,
-todas as páginas funcionam sem sessão real — o usuário mockado
-(`static/js/mock/sessao.js`) é usado como se estivesse sempre logado.
+\* "Requer login" depende da sessão JWT emitida pelo back-end: sem cookie válido, a API
+devolve 401 e `static/js/api.js` redireciona para `ROTA_LOGIN`.
 
 ### O que cada página faz, em detalhe
 
@@ -69,8 +67,9 @@ comparar visualmente. Ver [static/README.md § Acessibilidade](../static/README.
 como o tema é de fato aplicado.
 
 **`login.html`** / **`cadastro.html`**
-Formulários de autenticação. Sem integração real com JWT ainda — `entrar()` e
-`cadastrar()` em `static/js/api.js` caem no modo mock quando `USAR_DADOS_LOCAIS = true`.
+Formulários de autenticação. `entrar()` e `cadastrar()` em `static/js/api.js` chamam
+`POST /api/login` e `POST /api/users`; o token de sessão volta em cookie definido pelo
+servidor.
 
 ## Estrutura comum a toda página
 
@@ -215,9 +214,9 @@ em toda página que tem este bloco na nav.
    `aria-current="page"` só no arquivo que representa a própria página.
 4. Crie o script de página correspondente em `static/js/pages/nome-da-pagina.js` (ver
    [static/README.md § pages/](../static/README.md)).
-5. Se a página expõe uma tabela do banco que ainda não tem mock, crie o mock em
-   `static/js/mock/` e a função correspondente em `static/js/api.js` antes de montar a
-   tela — assim a página já nasce puxando dados de um único lugar.
+5. Se a página expõe uma tabela do banco que ainda não tem função em
+   `static/js/api.js`, crie a função lá antes de montar a tela — assim a página já nasce
+   puxando dados de um único lugar.
 
 ## Sobre rotas sem extensão
 

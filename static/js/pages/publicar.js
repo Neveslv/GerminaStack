@@ -1,5 +1,3 @@
-/** Página de nova publicação: valida o formulário e envia à API. */
-
 import { criarPost, listarMaterias } from '../api.js';
 import { criarElemento, criarPainelDeEstado } from '../utils/dom.js';
 
@@ -29,7 +27,6 @@ function limparErros() {
     campoDescricaoImagem.setAttribute('aria-invalid', 'false');
 }
 
-/** Valida os campos e devolve o primeiro elemento inválido, ou null. */
 function validar() {
     let primeiroInvalido = null;
 
@@ -42,7 +39,6 @@ function validar() {
         if (!primeiroInvalido) primeiroInvalido = elemento;
     });
 
-    // A coluna image_url aceita nulo, então o campo só é validado se foi preenchido.
     const imagem = campoImagem.value.trim();
     const descricaoImagem = campoDescricaoImagem.value.trim();
     if (imagem && !/^https?:\/\/.+/i.test(imagem)) {

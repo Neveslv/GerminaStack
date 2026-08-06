@@ -1,11 +1,3 @@
-/**
- * Página de perfil.
- *
- * Sem `?usuario=` na URL, mostra o perfil de quem está logado.
- * Com `?usuario=fulano`, mostra o perfil público daquela pessoa — é para lá
- * que apontam os links de autor no feed e nos comentários.
- */
-
 import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, sair } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';

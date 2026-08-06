@@ -414,3 +414,8 @@ export async function completarLogin(dados) {
         body: JSON.stringify(dados)
     });
 }
+
+export async function sair() {
+    if (USAR_DADOS_LOCAIS) return null;
+    return requisitar('/api/logout', { method: 'POST' });
+}

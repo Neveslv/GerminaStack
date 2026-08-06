@@ -1,6 +1,10 @@
 package database
 
-import "testing"
+import (
+	"math"
+	"strconv"
+	"testing"
+)
 
 func TestParsePagination(t *testing.T) {
 	t.Parallel()
@@ -22,6 +26,7 @@ func TestParsePagination(t *testing.T) {
 		{name: "rejects zero page size", page: "1", pageSize: "0", wantErr: true},
 		{name: "rejects negative page size", page: "1", pageSize: "-1", wantErr: true},
 		{name: "rejects page size above maximum", page: "1", pageSize: "101", wantErr: true},
+		{name: "rejects offset overflow", page: strconv.Itoa(math.MaxInt), pageSize: "100", wantErr: true},
 	}
 
 	for _, tt := range tests {

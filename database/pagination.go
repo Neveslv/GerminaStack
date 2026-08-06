@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -24,6 +25,9 @@ func ParsePagination(page, pageSize string) (Pagination, error) {
 	}
 	if parsedPageSize > maxPageSize {
 		return Pagination{}, fmt.Errorf("page_size must be at most %d", maxPageSize)
+	}
+	if parsedPage-1 > math.MaxInt/parsedPageSize {
+		return Pagination{}, fmt.Errorf("page is too large")
 	}
 	return Pagination{Page: parsedPage, PageSize: parsedPageSize}, nil
 }

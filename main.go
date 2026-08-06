@@ -65,10 +65,16 @@ func run() error {
 	}
 	credentials := database.NewPostgresCredentialRepository(db)
 	challenges := database.NewPostgresChallengeRepository(db)
+	catalog := database.NewPostgresCatalogRepository(db)
+	discussion := database.NewPostgresDiscussionRepository(db)
+	account := database.NewPostgresAccountRepository(db)
 	authService := auth.NewService(credentials, challenges, mailer, []byte(cfg.TwoFactorSecret), systemClock{})
 	authHandler := handlers.NewAuthHandler(authService, cfg.JWTSecret, cfg.CookieSecure, tokenTTL, cfg.AuthOperationTimeout)
 	userHandler := handlers.NewUserHandler(credentials, cfg.AuthOperationTimeout)
-	router := routes.NewRouter(authHandler, userHandler)
+	catalogHandler := handlers.NewCatalogHandler(catalog, cfg.AuthOperationTimeout)
+	discussionHandler := handlers.NewDiscussionHandler(discussion, cfg.AuthOperationTimeout)
+	accountHandler := handlers.NewAccountHandler(account, cfg.AuthOperationTimeout)
+	router := routes.NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, accountHandler, cfg.JWTSecret)
 
 	server := newHTTPServer(cfg.HTTPAddr, router, cfg.AuthOperationTimeout)
 	serverErrors := make(chan error, 1)

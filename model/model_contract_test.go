@@ -160,6 +160,8 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 				contractField("Likes", int64(0), "likes", "likes"),
 				contractField("Dislikes", int64(0), "dislikes", "dislikes"),
 				contractField("CommentsCount", int64(0), "comments_count", "comments_count"),
+				contractField("AuthorName", "", "author_name", "author_name"),
+				contractField("AuthorUsername", "", "author_username", "author_username"),
 				contractField(
 					"CreatedAt",
 					(*time.Time)(nil),

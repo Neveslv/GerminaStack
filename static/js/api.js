@@ -386,9 +386,9 @@ async function buscarMeuPerfil() {
     return perfilAtual;
 }
 
-function normalizarAutor(id, usuario) {
+function normalizarAutor(id, usuario, name, username) {
     if (id === usuario.id) return usuario;
-    return { id, name: `Usuário #${id}`, username: null };
+    return { id, name: name || `Usuário #${id}`, username: username || null };
 }
 
 function normalizarMensagem(item, usuario) {
@@ -398,7 +398,7 @@ function normalizarMensagem(item, usuario) {
 function normalizarPost(post, materias, usuario) {
     return {
         ...post,
-        author: normalizarAutor(post.id_user, usuario),
+        author: normalizarAutor(post.id_user, usuario, post.author_name, post.author_username),
         subject: materias.find((materia) => materia.id === post.id_subject) ?? {
             id: post.id_subject,
             subject: 'Matéria'

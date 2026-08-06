@@ -16,6 +16,8 @@ type Post struct {
 	Likes            int64      `db:"likes" json:"likes"`
 	Dislikes         int64      `db:"dislikes" json:"dislikes"`
 	CommentsCount    int64      `db:"comments_count" json:"comments_count"`
+	AuthorName       string     `db:"author_name" json:"author_name"`
+	AuthorUsername   string     `db:"author_username" json:"author_username"`
 	CreatedAt        *time.Time `db:"created_at" json:"created_at"`
 }
 

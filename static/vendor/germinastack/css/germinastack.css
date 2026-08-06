@@ -1114,6 +1114,10 @@ fieldset.gs-card > legend + * {
   gap: 8px;
 }
 
+.gs-form-group[hidden] {
+  display: none;
+}
+
 .gs-form-hint,
 .gs-form-error {
   font-size: 12px;

@@ -157,20 +157,18 @@ export function criarCartaoDePost(post, { minhaReacao = null, destaque = false }
     corpo.append(montarCabecalho(post, destaque));
 
     if (post.image_url) {
+        const descricao = post.image_description?.trim();
+        const midia = criarElemento('figure', { classe: 'gs-post-media' });
         const imagem = criarElemento('img', {
             atributos: {
                 src: post.image_url,
-                // A tabela `posts` guarda a URL da imagem, mas não guarda texto
-                // alternativo. Sem esse dado, alt="" é o menos ruim: o leitor de
-                // tela pula a imagem em vez de soletrar uma URL. Quando o back
-                // adicionar a coluna, é aqui que ela entra.
-                alt: post.image_description ?? '',
+                alt: descricao ?? '',
                 loading: 'lazy'
             }
         });
-        imagem.style.maxWidth = '100%';
-        imagem.style.borderRadius = 'var(--gs-radius-sm)';
-        corpo.append(imagem);
+        midia.append(imagem);
+        if (descricao) midia.append(criarElemento('figcaption', { texto: descricao }));
+        corpo.append(midia);
     }
 
     artigo.append(corpo, montarRodape(post, minhaReacao));

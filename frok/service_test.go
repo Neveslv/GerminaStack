@@ -92,6 +92,22 @@ func TestServiceRepliesToMentionedThreadWithItsContext(t *testing.T) {
 	}
 }
 
+func TestServiceRecognizesItsOwnThreadWithoutMention(t *testing.T) {
+	t.Parallel()
+	service := NewService(&repositoryFake{botID: 7, comment: model.Comment{UserID: 7}}, clientFake{}, time.Second, nil)
+	if !service.repliedInThread(9) {
+		t.Fatal("repliedInThread() = false")
+	}
+}
+
+func TestFormatReplyKeepsPlainUTF8Text(t *testing.T) {
+	t.Parallel()
+	got := formatReply("ana", "Use `x` e \\frac{a}{b} *agora* @joao")
+	if got != "@ana Use x e frac{a}{b} agora ＠joao" {
+		t.Fatalf("formatReply() = %q", got)
+	}
+}
+
 func TestServiceUsesAndStoresLongTermMemory(t *testing.T) {
 	t.Parallel()
 	repository := &repositoryFake{username: "ana", botID: 7}

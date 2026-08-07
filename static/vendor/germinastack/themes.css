@@ -552,6 +552,27 @@ body {
     color: var(--gs-muted);
 }
 
+.profile-actions { gap: var(--gs-space-3); }
+.trending-posts { min-height: 4.5rem; }
+.trending-post { display: grid; gap: var(--gs-space-1); color: inherit; text-decoration: none; }
+.trending-post span { color: var(--gs-muted); }
+
+[data-tema="dark"] .gs-card,
+[data-tema="dark"] .gs-side-card,
+[data-tema="dark"] .gs-post,
+[data-tema="dark"] .gs-comment-bubble,
+[data-tema="dark"] .gs-reply-bubble,
+[data-tema="black_yellow"] .gs-card,
+[data-tema="black_yellow"] .gs-side-card,
+[data-tema="black_yellow"] .gs-post,
+[data-tema="black_yellow"] .gs-comment-bubble,
+[data-tema="black_yellow"] .gs-reply-bubble,
+[data-tema="yellow_black"] .gs-card,
+[data-tema="yellow_black"] .gs-side-card,
+[data-tema="yellow_black"] .gs-post,
+[data-tema="yellow_black"] .gs-comment-bubble,
+[data-tema="yellow_black"] .gs-reply-bubble { border: 1px solid var(--gs-hairline); }
+
 /* =========================================================
    7. font_family
    ========================================================= */

@@ -8,10 +8,28 @@ const feed = document.querySelector('#feed');
 const listaMaterias = document.querySelector('#lista-materias');
 const campoBusca = document.querySelector('#busca');
 const estado = criarPainelDeEstado(document.querySelector('#estado-feed'));
+const trending = document.querySelector('#trending-posts');
 
 const filtros = { idSubject: null, termo: '' };
 
 let postsCarregados = [];
+let indiceTrending = 0;
+let temporizadorTrending;
+
+function renderizarTrending(posts) {
+    if (!trending || posts.length === 0) return;
+    const recentes = [...posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+    const mostrar = () => {
+        const post = recentes[indiceTrending % recentes.length];
+        const link = criarElemento('a', { classe: 'trending-post', atributos: { href: `/post?id=${post.id}` } });
+        link.append(criarElemento('strong', { texto: post.title }), criarElemento('span', { texto: post.subject.subject }));
+        trending.replaceChildren(link);
+        indiceTrending += 1;
+    };
+    mostrar();
+    window.clearInterval(temporizadorTrending);
+    if (recentes.length > 1) temporizadorTrending = window.setInterval(mostrar, 5000);
+}
 
 function aplicarBusca(posts) {
     const termo = filtros.termo.trim().toLowerCase();
@@ -57,6 +75,7 @@ async function carregarPosts() {
 
     try {
         postsCarregados = await listarPosts({ idSubject: filtros.idSubject });
+        if (!filtros.idSubject) renderizarTrending(postsCarregados);
         await renderizarFeed();
     } catch (erro) {
         feed.replaceChildren();

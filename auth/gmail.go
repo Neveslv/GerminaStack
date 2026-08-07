@@ -79,9 +79,5 @@ func (m *GmailMailer) accessToken(ctx context.Context) (string, error) {
 }
 
 func wireGmailMessage(from string, message Message) ([]byte, error) {
-	mailer, err := NewSMTPMailer(SMTPConfig{FromAddress: from, FromName: "GerminaStack", Timeout: 1})
-	if err != nil {
-		return nil, err
-	}
-	return mailer.wireMessage(message)
+	return wireMessage(from, "GerminaStack", message)
 }

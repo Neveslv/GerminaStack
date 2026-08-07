@@ -203,7 +203,7 @@ async function carregarPagina() {
 
     try {
         const usuario = await buscarUsuario(usuarioDaUrl);
-        ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === usuario.username;
+        ehMeuPerfil = !usuarioDaUrl;
 
         document.title = `${usuario.name} | GerminaStack`;
         montarCartao(usuario);

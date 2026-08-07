@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-func TestClientReplyUsesGroqResponsesWithBrowserSearch(t *testing.T) {
+func TestClientReplyUsesGroqResponsesWithoutToolCalls(t *testing.T) {
 	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodPost || request.Header.Get("Authorization") != "Bearer test-key" {
 			t.Fatalf("request = %s / %s", request.Method, request.Header.Get("Authorization"))
 		}
 		body, err := io.ReadAll(request.Body)
-		if err != nil || !strings.Contains(string(body), `"model":"openai/gpt-oss-20b"`) || !strings.Contains(string(body), `"type":"browser_search"`) || !strings.Contains(string(body), "texto simples em UTF-8") {
+		if err != nil || !strings.Contains(string(body), `"model":"openai/gpt-oss-20b"`) || strings.Contains(string(body), `"tools"`) || !strings.Contains(string(body), "texto simples em UTF-8") {
 			t.Fatalf("body = %s; err = %v", body, err)
 		}
 		writer.Header().Set("Content-Type", "application/json")

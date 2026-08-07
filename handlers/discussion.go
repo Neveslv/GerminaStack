@@ -498,8 +498,31 @@ func (h *DiscussionHandler) React(messageType string) gin.HandlerFunc {
 			writeDiscussionError(c, err)
 			return
 		}
-		c.Status(http.StatusNoContent)
-		c.Writer.WriteHeaderNow()
+		var likes, dislikes int64
+		switch messageType {
+		case "post":
+			item, err := h.repository.GetPost(ctx, messageID)
+			if err != nil {
+				writeDiscussionError(c, err)
+				return
+			}
+			likes, dislikes = item.Likes, item.Dislikes
+		case "comment":
+			item, err := h.repository.GetComment(ctx, messageID)
+			if err != nil {
+				writeDiscussionError(c, err)
+				return
+			}
+			likes, dislikes = item.Likes, item.Dislikes
+		default:
+			item, err := h.repository.GetReply(ctx, messageID)
+			if err != nil {
+				writeDiscussionError(c, err)
+				return
+			}
+			likes, dislikes = item.Likes, item.Dislikes
+		}
+		c.JSON(http.StatusOK, gin.H{"likes": likes, "dislikes": dislikes})
 	}
 }
 

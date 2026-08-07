@@ -111,7 +111,6 @@ function montarCartao(usuario) {
         });
         cartao.append(formulario);
         const acoes = criarElemento('div', { classe: 'gs-cluster profile-actions' });
-        acoes.style.gap = 'var(--gs-space-3)';
         const botaoSair = criarElemento('button', {
             classe: 'gs-btn gs-btn-ghost',
             texto: 'Sair',
@@ -144,6 +143,11 @@ function montarCartao(usuario) {
             }),
             botaoSair
         );
+        if (usuario.is_admin || ['nicolas.oliveira', 'matheus.fazan'].includes(usuario.username)) {
+            acoes.prepend(criarElemento('a', {
+                classe: 'gs-btn gs-btn-secondary', texto: 'Administração', atributos: { href: '/admin' }
+            }));
+        }
         cartao.append(acoes);
     }
 }
@@ -165,7 +169,7 @@ function montarNumeros(posts) {
     const fragmento = document.createDocumentFragment();
 
     cartoes.forEach(({ rotulo, valor }) => {
-        const item = criarElemento('article', { classe: 'gs-metric-card gs-stack' });
+        const item = criarElemento('article', { classe: 'gs-metric-card profile-metric-card' });
         item.append(
             criarElemento('span', { classe: 'gs-metric-label', texto: rotulo }),
             criarElemento('strong', { texto: String(valor) })

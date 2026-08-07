@@ -194,6 +194,9 @@ export function criarComentario(comentario, minhaReacao = null) {
 
     const { formulario, campo } = criarFormularioDeResposta(comentario.id, (resposta) => {
         respostas.append(criarResposta(resposta));
+        if (comentario.author.username === 'frok') {
+            window.setTimeout(() => window.location.reload(), 2500);
+        }
     });
 
     item.append(formulario);

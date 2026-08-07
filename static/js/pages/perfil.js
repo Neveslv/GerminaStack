@@ -6,10 +6,10 @@
  * que apontam os links de autor no feed e nos comentários.
  */
 
-import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, salvarPerfil, sair } from '../api.js';
+import { buscarMeuPerfil, buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, salvarPerfil, sair } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
-import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
+import { corDoAutor, fotoDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataCompleta } from '../utils/data.js';
 
 const cartao = document.querySelector('#cartao-perfil');
@@ -19,21 +19,22 @@ const estadoPerfil = criarPainelDeEstado(document.querySelector('#estado-perfil'
 const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
 
 const usuarioDaUrl = new URLSearchParams(window.location.search).get('usuario');
-let ehMeuPerfil = !usuarioDaUrl;
+let ehMeuPerfil = false;
 
 function montarCartao(usuario) {
     cartao.replaceChildren();
 
-    const avatar = usuario.profile_image_url
+    const foto = fotoDoAutor(usuario);
+    const avatar = foto
         ? criarElemento('img', {
             classe: 'gs-avatar',
-            atributos: { src: usuario.profile_image_url, alt: usuario.profile_image_description || `Foto de ${usuario.name}` }
+            atributos: { src: foto, alt: usuario.profile_image_description || `Foto de ${usuario.name}` }
         })
         : criarElemento('span', {
             classe: 'gs-avatar', texto: inicialDoNome(usuario.name),
             atributos: { 'aria-hidden': 'true' }
         });
-    if (usuario.profile_image_url) avatar.style.objectFit = 'cover';
+    if (foto) avatar.style.objectFit = 'cover';
     avatar.style.background = corDoAutor(usuario.id);
 
     const identificacao = criarElemento('div', { classe: 'gs-stack' });
@@ -202,8 +203,8 @@ async function carregarPagina() {
     estadoPublicacoes.carregando('Carregando publicações…');
 
     try {
-        const usuario = await buscarUsuario(usuarioDaUrl);
-        ehMeuPerfil = !usuarioDaUrl;
+        const [usuario, meuPerfil] = await Promise.all([buscarUsuario(usuarioDaUrl), buscarMeuPerfil()]);
+        ehMeuPerfil = usuario.id === meuPerfil.id;
 
         document.title = `${usuario.name} | GerminaStack`;
         montarCartao(usuario);

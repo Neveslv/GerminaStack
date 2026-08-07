@@ -260,12 +260,12 @@ body {
     --gs-focus-ring-color: #000000;
 
     --gsk-fundo-pagina: #ffffff;
-    --gsk-superficie-cartao: #ffffff;
+    --gsk-superficie-cartao: #f2f2f2;
     --gsk-superficie-flutuante: #ffffff;
     --gsk-superficie-campo: #ffffff;
-    --gsk-superficie-suave: #ffffff;
+    --gsk-superficie-suave: #e6e6e6;
     --gsk-superficie-chip: #ffffff;
-    --gsk-superficie-bolha: #ffffff;
+    --gsk-superficie-bolha: #f2f2f2;
 
     --gsk-topo-fundo: #000000;
     --gsk-topo-texto: #ffffff;
@@ -281,6 +281,17 @@ body {
     --gsk-alerta-fundo: #ffffff;
     --gsk-alerta-borda: #000000;
     --gsk-alerta-texto: #a80000;
+}
+
+[data-tema="high_contrast"] .gs-card,
+[data-tema="high_contrast"] .gs-side-card,
+[data-tema="high_contrast"] .gs-post,
+[data-tema="high_contrast"] .gs-metric-card,
+[data-tema="high_contrast"] .gs-stat-card,
+[data-tema="high_contrast"] .gs-list-row,
+[data-tema="high_contrast"] .gs-comment-bubble,
+[data-tema="high_contrast"] .gs-reply-bubble {
+    border: 1px solid #000000;
 }
 
 /* =========================================================

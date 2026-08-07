@@ -233,6 +233,14 @@ export async function buscarUsuario(username) {
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
+/** Salva os dados editáveis do perfil do usuário logado. */
+export async function salvarPerfil(dados) {
+    return requisitar('/api/me', {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+}
+
 /** Devolve as publicações escritas por um usuário. */
 export async function listarPostsDoAutor(idAutor) {
     if (USAR_DADOS_LOCAIS) {
@@ -297,10 +305,12 @@ export async function reagir({ tipo, id, reacao }) {
     });
     const atual = anterior === reacao ? null : reacao;
     reacoesDaSessao.set(chave, atual);
+	const atualizado = await requisitar(`/api/${recurso}/${id}`);
     return {
         reacao: atual,
-        likes: (atual === 'like' ? 1 : 0) - (anterior === 'like' ? 1 : 0),
-        dislikes: (atual === 'dislike' ? 1 : 0) - (anterior === 'dislike' ? 1 : 0)
+		likes: atualizado.likes,
+		dislikes: atualizado.dislikes,
+		absolutos: true
     };
 }
 

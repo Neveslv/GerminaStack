@@ -22,6 +22,9 @@ type Config struct {
 	AuthOperationTimeout time.Duration
 	SMTP                 auth.SMTPConfig
 	Frok                 FrokConfig
+	GoogleClientID       string
+	GoogleClientSecret   string
+	GoogleRefreshToken   string
 }
 
 type FrokConfig struct {
@@ -138,6 +141,9 @@ func Load() (Config, error) {
 			MemoryMongoURI: strings.TrimSpace(os.Getenv("FROK_MONGODB_URI")),
 			MemoryDatabase: valueOrDefault("FROK_MONGODB_DATABASE", "germinastack"),
 		},
+		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		GoogleRefreshToken: strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
 	}, nil
 }
 

@@ -112,8 +112,12 @@ export function criarReacoes({ tipo, id, likes, dislikes, minhaReacao }) {
         try {
             const deltas = await reagir({ tipo, id, reacao: escolhida });
 
-            const novoLikes = Math.max(0, Number(botaoLike.dataset.total) + deltas.likes);
-            const novoDislikes = Math.max(0, Number(botaoDislike.dataset.total) + deltas.dislikes);
+            const novoLikes = deltas.absolutos
+                ? deltas.likes
+                : Math.max(0, Number(botaoLike.dataset.total) + deltas.likes);
+            const novoDislikes = deltas.absolutos
+                ? deltas.dislikes
+                : Math.max(0, Number(botaoDislike.dataset.total) + deltas.dislikes);
 
             atualizarBotao(botaoLike, novoLikes, deltas.reacao === 'like');
             atualizarBotao(botaoDislike, novoDislikes, deltas.reacao === 'dislike');

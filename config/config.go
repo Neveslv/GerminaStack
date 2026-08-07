@@ -25,9 +25,11 @@ type Config struct {
 }
 
 type FrokConfig struct {
-	APIKey  string
-	Model   string
-	Timeout time.Duration
+	APIKey         string
+	Model          string
+	Timeout        time.Duration
+	MemoryMongoURI string
+	MemoryDatabase string
 }
 
 func Load() (Config, error) {
@@ -130,11 +132,20 @@ func Load() (Config, error) {
 		AuthOperationTimeout: authOperationTimeout,
 		SMTP:                 smtpConfig,
 		Frok: FrokConfig{
-			APIKey:  strings.TrimSpace(os.Getenv("GROQ_API_KEY")),
-			Model:   frokModel,
-			Timeout: frokTimeout,
+			APIKey:         strings.TrimSpace(os.Getenv("GROQ_API_KEY")),
+			Model:          frokModel,
+			Timeout:        frokTimeout,
+			MemoryMongoURI: strings.TrimSpace(os.Getenv("FROK_MONGODB_URI")),
+			MemoryDatabase: valueOrDefault("FROK_MONGODB_DATABASE", "germinastack"),
 		},
 	}, nil
+}
+
+func valueOrDefault(name, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func validateAuthenticationSecrets(jwtSecret, twoFactorSecret string) error {

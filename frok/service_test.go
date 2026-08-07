@@ -2,6 +2,7 @@ package frok
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -26,7 +27,7 @@ func TestServiceCreatesBotReplyAndNotifiesOnlyAuthor(t *testing.T) {
 	t.Parallel()
 	repository := &repositoryFake{username: "ana.silva", botID: 7}
 	service := NewService(repository, clientFake{reply: "@outra-pessoa resposta"}, time.Second, nil)
-	service.respond(42, 0, 9, "Comentário: @frok ajude")
+	service.respond(42, 0, 9, "Comentário: @frok ajude", "@frok ajude")
 	if repository.replyCommentID != 9 || repository.replyUserID != 7 {
 		t.Fatalf("reply target/user = %d/%d", repository.replyCommentID, repository.replyUserID)
 	}
@@ -39,7 +40,7 @@ func TestServiceCreatesCommentForMentionedPost(t *testing.T) {
 	t.Parallel()
 	repository := &repositoryFake{username: "ana", botID: 7}
 	service := NewService(repository, clientFake{reply: "Use uma chave primária."}, time.Second, nil)
-	service.respond(42, 8, 0, "Post: @frok")
+	service.respond(42, 8, 0, "Post: @frok", "Post: @frok")
 	if repository.commentPostID != 8 || repository.commentUserID != 7 || repository.commentContent != "@ana Use uma chave primária." {
 		t.Fatalf("comment = %#v", repository)
 	}
@@ -82,12 +83,35 @@ func TestServiceRepliesToMentionedThreadWithItsContext(t *testing.T) {
 	}
 	client := &recordingClient{reply: "Resposta do Frok"}
 	service := NewService(repository, client, time.Second, nil)
-	service.respondToThread(42, 9)
+	service.respondToThread(42, 9, "@frok explique")
 	if repository.replyCommentID != 9 || repository.replyContent != "@ana Resposta do Frok" {
 		t.Fatalf("reply = %#v", repository)
 	}
 	if client.input != "Título: Transação\n\nPost: Texto do post\n\nComentário relacionado de @ana: @frok explique\n\nRespostas relacionadas:\n- @bruno: Primeira resposta" {
 		t.Fatalf("Frok input = %q", client.input)
+	}
+}
+
+func TestServiceUsesAndStoresLongTermMemory(t *testing.T) {
+	t.Parallel()
+	repository := &repositoryFake{username: "ana", botID: 7}
+	client := &recordingClient{reply: "Resposta nova"}
+	memory := &memoryFake{memories: []Memory{{Prompt: "Explique chave estrangeira", Reply: "Ela cria uma relação."}}}
+	service := NewService(repository, client, time.Second, nil, memory)
+	service.respond(42, 8, 0, "Post: @frok detalhe", "@frok detalhe")
+	if client.input != "Memórias anteriores deste mesmo usuário:\n- Pergunta: Explique chave estrangeira\n  Resposta do Frok: Ela cria uma relação.\n\nContexto atual:\nPost: @frok detalhe" {
+		t.Fatalf("Frok input = %q", client.input)
+	}
+	if memory.userID != 42 || memory.prompt != "@frok detalhe" || memory.reply != "Resposta nova" {
+		t.Fatalf("memory = %#v", memory)
+	}
+}
+
+func TestShortenMemoryKeepsRuneBoundary(t *testing.T) {
+	t.Parallel()
+	value := strings.Repeat("á", 1501)
+	if got := shortenMemory(value); got != strings.Repeat("á", 1500)+"…" {
+		t.Fatalf("shortenMemory() = %q", got)
 	}
 }
 
@@ -98,6 +122,19 @@ func (f clientFake) Reply(context.Context, string) (string, error) { return f.re
 type recordingClient struct {
 	reply string
 	input string
+}
+
+type memoryFake struct {
+	memories []Memory
+	userID   int64
+	prompt   string
+	reply    string
+}
+
+func (f *memoryFake) Recall(context.Context, int64) ([]Memory, error) { return f.memories, nil }
+func (f *memoryFake) Remember(_ context.Context, userID int64, prompt, reply string) error {
+	f.userID, f.prompt, f.reply = userID, prompt, reply
+	return nil
 }
 
 func (f *recordingClient) Reply(_ context.Context, input string) (string, error) {

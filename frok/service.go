@@ -26,15 +26,37 @@ type ReplyClient interface {
 	Reply(context.Context, string) (string, error)
 }
 
+type Memory struct {
+	Prompt string
+	Reply  string
+}
+
+type MemoryStore interface {
+	Recall(context.Context, int64) ([]Memory, error)
+	Remember(context.Context, int64, string, string) error
+}
+
+type NoopMemoryStore struct{}
+
+func (NoopMemoryStore) Recall(context.Context, int64) ([]Memory, error) { return nil, nil }
+func (NoopMemoryStore) Remember(context.Context, int64, string, string) error {
+	return nil
+}
+
 type Service struct {
 	repository Repository
 	client     ReplyClient
+	memory     MemoryStore
 	timeout    time.Duration
 	logError   func(error)
 }
 
-func NewService(repository Repository, client ReplyClient, timeout time.Duration, logError func(error)) *Service {
-	return &Service{repository: repository, client: client, timeout: timeout, logError: logError}
+func NewService(repository Repository, client ReplyClient, timeout time.Duration, logError func(error), memories ...MemoryStore) *Service {
+	memory := MemoryStore(NoopMemoryStore{})
+	if len(memories) > 0 && memories[0] != nil {
+		memory = memories[0]
+	}
+	return &Service{repository: repository, client: client, memory: memory, timeout: timeout, logError: logError}
 }
 
 func IsMentioned(content string) bool {
@@ -45,30 +67,30 @@ func (s *Service) DispatchPost(authorID int64, post model.Post) {
 	if !IsMentioned(post.Title + "\n" + post.Content) {
 		return
 	}
-	go s.respond(authorID, post.ID, 0, postContext(post))
+	go s.respond(authorID, post.ID, 0, postContext(post), postMemory(post))
 }
 
 func (s *Service) DispatchComment(authorID int64, comment model.Comment) {
 	if !IsMentioned(comment.Content) {
 		return
 	}
-	go s.respondToThread(authorID, comment.ID)
+	go s.respondToThread(authorID, comment.ID, comment.Content)
 }
 
 func (s *Service) DispatchReply(authorID int64, reply model.CommentOnComment) {
 	if !IsMentioned(reply.Content) {
 		return
 	}
-	go s.respondToThread(authorID, reply.CommentID)
+	go s.respondToThread(authorID, reply.CommentID, reply.Content)
 }
 
-func (s *Service) respond(authorID, postID, commentID int64, input string) {
+func (s *Service) respond(authorID, postID, commentID int64, input, memoryPrompt string) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
-	s.respondWithContext(ctx, authorID, postID, commentID, input)
+	s.respondWithContext(ctx, authorID, postID, commentID, input, memoryPrompt)
 }
 
-func (s *Service) respondToThread(authorID, commentID int64) {
+func (s *Service) respondToThread(authorID, commentID int64, memoryPrompt string) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
 	comment, err := s.repository.GetComment(ctx, commentID)
@@ -86,16 +108,20 @@ func (s *Service) respondToThread(authorID, commentID int64) {
 		s.report(err)
 		return
 	}
-	s.respondWithContext(ctx, authorID, 0, commentID, threadContext(post, comment, replies))
+	s.respondWithContext(ctx, authorID, 0, commentID, threadContext(post, comment, replies), memoryPrompt)
 }
 
-func (s *Service) respondWithContext(ctx context.Context, authorID, postID, commentID int64, input string) {
+func (s *Service) respondWithContext(ctx context.Context, authorID, postID, commentID int64, input, memoryPrompt string) {
 	username, err := s.repository.Username(ctx, authorID)
 	if err != nil {
 		s.report(err)
 		return
 	}
-	reply, err := s.client.Reply(ctx, input)
+	memories, err := s.memory.Recall(ctx, authorID)
+	if err != nil {
+		s.report(err)
+	}
+	reply, err := s.client.Reply(ctx, withMemory(input, memories))
 	if err != nil {
 		s.report(err)
 		return
@@ -113,7 +139,36 @@ func (s *Service) respondWithContext(ctx context.Context, authorID, postID, comm
 	}
 	if err != nil {
 		s.report(err)
+		return
 	}
+	if err := s.memory.Remember(ctx, authorID, memoryPrompt, reply); err != nil {
+		s.report(err)
+	}
+}
+
+func postMemory(post model.Post) string {
+	return postContext(post)
+}
+
+func withMemory(input string, memories []Memory) string {
+	if len(memories) == 0 {
+		return input
+	}
+	context := "Memórias anteriores deste mesmo usuário:"
+	for _, memory := range memories {
+		context += "\n- Pergunta: " + shortenMemory(memory.Prompt) + "\n  Resposta do Frok: " + shortenMemory(memory.Reply)
+	}
+	return context + "\n\nContexto atual:\n" + input
+}
+
+func shortenMemory(value string) string {
+	const maxRunes = 1500
+	runes := []rune(strings.TrimSpace(value))
+	if len(runes) <= maxRunes {
+		return string(runes)
+	}
+	// ponytail: cada memória é limitada para manter o prompt do Groq previsível; usar orçamento por tokens se crescer.
+	return string(runes[:maxRunes]) + "…"
 }
 
 func formatReply(username, reply string) string {

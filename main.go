@@ -72,11 +72,24 @@ func run() error {
 	account := database.NewPostgresAccountRepository(db)
 	var frokService *frok.Service
 	if cfg.Frok.APIKey != "" {
+		memory := frok.MemoryStore(frok.NoopMemoryStore{})
+		if cfg.Frok.MemoryMongoURI != "" {
+			memoryContext, cancelMemory := context.WithTimeout(rootContext, cfg.Frok.Timeout)
+			mongoMemory, err := frok.NewMongoMemoryStore(memoryContext, cfg.Frok.MemoryMongoURI, cfg.Frok.MemoryDatabase)
+			cancelMemory()
+			if err != nil {
+				log.Print("Frok memory disabled: MongoDB is unavailable")
+			} else {
+				memory = mongoMemory
+				defer mongoMemory.Close()
+			}
+		}
 		frokService = frok.NewService(
 			database.NewPostgresFrokRepository(db),
 			frok.NewClient(cfg.Frok.APIKey, cfg.Frok.Model, cfg.Frok.Timeout),
 			cfg.Frok.Timeout,
 			func(err error) { log.Printf("Frok failed: %v", err) },
+			memory,
 		)
 	}
 	authService := auth.NewService(credentials, challenges, mailer, []byte(cfg.TwoFactorSecret), systemClock{})

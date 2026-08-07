@@ -20,6 +20,11 @@ const estadoRespostas = criarPainelDeEstado(document.querySelector('#estado-resp
 
 const idPost = new URLSearchParams(window.location.search).get('id');
 
+function estaEscrevendoResposta() {
+    const campo = document.activeElement;
+    return (campo instanceof HTMLInputElement || campo instanceof HTMLTextAreaElement) && campo.value.trim() !== '';
+}
+
 function copiarTextoDoPost(post) {
     navigator.clipboard?.writeText(post.content);
     window.GerminaStackUI?.showToast({
@@ -62,7 +67,9 @@ async function renderizarThread(comentarios) {
 
 async function atualizarThread(silencioso = false) {
     try {
-        await renderizarThread(await listarComentarios(idPost));
+        const comentarios = await listarComentarios(idPost);
+        if (silencioso && estaEscrevendoResposta()) return;
+        await renderizarThread(comentarios);
     } catch (erro) {
         if (!silencioso) estadoRespostas.erro(erro.message, 'Recarregue a página para tentar de novo.');
     }
@@ -148,5 +155,5 @@ async function carregarPagina() {
 
 carregarPagina();
 window.setInterval(() => {
-    if (!document.hidden && idPost) atualizarThread(true);
+    if (!document.hidden && idPost && !estaEscrevendoResposta()) atualizarThread(true);
 }, 10000);

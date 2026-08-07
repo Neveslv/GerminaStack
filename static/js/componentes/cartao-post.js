@@ -1,7 +1,7 @@
 /** Monta o cartao de uma publicacao usando os blocos gs-post do kit. */
 
 import { criarElemento } from '../utils/dom.js';
-import { corDoAutor, tomDaMateria, inicialDoNome } from '../utils/identidade.js';
+import { aplicarImagemNoAvatar, corDoAutor, tomDaMateria, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
 
@@ -100,7 +100,7 @@ function montarCabecalho(post, destaque) {
         texto: inicialDoNome(post.author.name),
         atributos: { 'aria-hidden': 'true' }
     });
-    avatar.style.background = corDoAutor(post.author.id);
+    if (!aplicarImagemNoAvatar(avatar, post.author)) avatar.style.background = corDoAutor(post.author.id);
 
     const cabecalho = criarElemento('div', { classe: 'gs-post-head' });
     cabecalho.append(avatar, usuario, montarMenu(post));

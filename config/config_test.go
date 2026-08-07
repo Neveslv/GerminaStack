@@ -35,6 +35,23 @@ func TestLoadReadsRequiredConfiguration(t *testing.T) {
 	if cfg.SMTP.Host != "smtp.example.com" || cfg.SMTP.Port != 587 || cfg.SMTP.FromName != "GerminaStack" {
 		t.Fatalf("SMTP = %#v", cfg.SMTP)
 	}
+	if cfg.Frok.APIKey != "" || cfg.Frok.Model != "openai/gpt-oss-20b" || cfg.Frok.Timeout != 30*time.Second || cfg.Frok.MemoryMongoURI != "" || cfg.Frok.MemoryDatabase != "germinastack" {
+		t.Fatalf("Frok = %#v", cfg.Frok)
+	}
+}
+
+func TestLoadReadsFrokMongoMemoryConfiguration(t *testing.T) {
+	setValidEnvironment(t)
+	t.Setenv("FROK_MONGODB_URI", "mongodb://frok:password@mongo.example.com:27017/germinastack")
+	t.Setenv("FROK_MONGODB_DATABASE", "frok_memory")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.Frok.MemoryMongoURI != "mongodb://frok:password@mongo.example.com:27017/germinastack" || cfg.Frok.MemoryDatabase != "frok_memory" {
+		t.Fatalf("Frok memory = %#v", cfg.Frok)
+	}
 }
 
 func TestLoadDefaultsCookieSecureAndHTTPAddress(t *testing.T) {
@@ -114,6 +131,16 @@ func TestLoadRejectsInvalidPortAndCookieBoolean(t *testing.T) {
 			}
 		})
 	}
+	for _, value := range []string{"not-a-duration", "0s", "-1s"} {
+		value := value
+		t.Run("Frok timeout "+value, func(t *testing.T) {
+			setValidEnvironment(t)
+			t.Setenv("FROK_TIMEOUT", value)
+			if _, err := Load(); err == nil {
+				t.Fatal("Load() error = nil, want invalid Frok timeout")
+			}
+		})
+	}
 }
 
 func TestLoadRejectsWeakOrReusedAuthenticationSecrets(t *testing.T) {
@@ -174,6 +201,9 @@ func setValidEnvironment(t *testing.T) {
 	t.Setenv("COOKIE_SECURE", "true")
 	t.Setenv("HTTP_ADDR", ":8080")
 	t.Setenv("AUTH_OPERATION_TIMEOUT", "15s")
+	t.Setenv("GROQ_API_KEY", "")
+	t.Setenv("FROK_MONGODB_URI", "")
+	t.Setenv("FROK_MONGODB_DATABASE", "")
 }
 
 func readExampleEnvironment(t *testing.T) map[string]string {

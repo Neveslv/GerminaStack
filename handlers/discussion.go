@@ -12,6 +12,7 @@ import (
 
 	"germinaStack/auth"
 	"germinaStack/database"
+	"germinaStack/frok"
 	"germinaStack/model"
 
 	"github.com/gin-gonic/gin"
@@ -41,10 +42,15 @@ type DiscussionRepository interface {
 type DiscussionHandler struct {
 	repository       DiscussionRepository
 	operationTimeout time.Duration
+	frok             *frok.Service
 }
 
-func NewDiscussionHandler(repository DiscussionRepository, operationTimeout time.Duration) *DiscussionHandler {
-	return &DiscussionHandler{repository: repository, operationTimeout: operationTimeout}
+func NewDiscussionHandler(repository DiscussionRepository, operationTimeout time.Duration, assistants ...*frok.Service) *DiscussionHandler {
+	handler := &DiscussionHandler{repository: repository, operationTimeout: operationTimeout}
+	if len(assistants) > 0 {
+		handler.frok = assistants[0]
+	}
+	return handler
 }
 
 func (h *DiscussionHandler) GetPost(c *gin.Context) {
@@ -77,6 +83,9 @@ func (h *DiscussionHandler) CreatePost(c *gin.Context) {
 	if err != nil {
 		writeDiscussionError(c, err)
 		return
+	}
+	if h.frok != nil {
+		h.frok.DispatchPost(userID, post)
 	}
 	c.JSON(http.StatusCreated, post)
 }
@@ -151,6 +160,9 @@ func (h *DiscussionHandler) CreateComment(c *gin.Context) {
 		writeDiscussionError(c, err)
 		return
 	}
+	if h.frok != nil {
+		h.frok.DispatchComment(userID, comment)
+	}
 	c.JSON(http.StatusCreated, comment)
 }
 
@@ -223,6 +235,9 @@ func (h *DiscussionHandler) CreateReply(c *gin.Context) {
 	if err != nil {
 		writeDiscussionError(c, err)
 		return
+	}
+	if h.frok != nil {
+		h.frok.DispatchReply(userID, reply)
 	}
 	c.JSON(http.StatusCreated, reply)
 }

@@ -21,9 +21,18 @@ type Config struct {
 	HTTPAddr             string
 	AuthOperationTimeout time.Duration
 	SMTP                 auth.SMTPConfig
+	Frok                 FrokConfig
 	GoogleClientID       string
 	GoogleClientSecret   string
 	GoogleRefreshToken   string
+}
+
+type FrokConfig struct {
+	APIKey         string
+	Model          string
+	Timeout        time.Duration
+	MemoryMongoURI string
+	MemoryDatabase string
 }
 
 func Load() (Config, error) {
@@ -91,6 +100,18 @@ func Load() (Config, error) {
 		}
 		authOperationTimeout = parsed
 	}
+	frokTimeout := 30 * time.Second
+	if value := strings.TrimSpace(os.Getenv("FROK_TIMEOUT")); value != "" {
+		parsed, err := time.ParseDuration(value)
+		if err != nil || parsed <= 0 {
+			return Config{}, errors.New("FROK_TIMEOUT is invalid")
+		}
+		frokTimeout = parsed
+	}
+	frokModel := strings.TrimSpace(os.Getenv("FROK_MODEL"))
+	if frokModel == "" {
+		frokModel = "openai/gpt-oss-20b"
+	}
 
 	smtpConfig := auth.SMTPConfig{
 		Host:        smtpHost,
@@ -113,10 +134,24 @@ func Load() (Config, error) {
 		HTTPAddr:             httpAddr,
 		AuthOperationTimeout: authOperationTimeout,
 		SMTP:                 smtpConfig,
-		GoogleClientID:       strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
-		GoogleClientSecret:   strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
-		GoogleRefreshToken:   strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
+		Frok: FrokConfig{
+			APIKey:         strings.TrimSpace(os.Getenv("GROQ_API_KEY")),
+			Model:          frokModel,
+			Timeout:        frokTimeout,
+			MemoryMongoURI: strings.TrimSpace(os.Getenv("FROK_MONGODB_URI")),
+			MemoryDatabase: valueOrDefault("FROK_MONGODB_DATABASE", "germinastack"),
+		},
+		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		GoogleRefreshToken: strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
 	}, nil
+}
+
+func valueOrDefault(name, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func validateAuthenticationSecrets(jwtSecret, twoFactorSecret string) error {

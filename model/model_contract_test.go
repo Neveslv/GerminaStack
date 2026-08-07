@@ -180,6 +180,8 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 				contractField("Content", "", "content", "content"),
 				contractField("Likes", int64(0), "likes", "likes"),
 				contractField("Dislikes", int64(0), "dislikes", "dislikes"),
+				contractField("AuthorName", "", "author_name", "author_name"),
+				contractField("AuthorUsername", "", "author_username", "author_username"),
 				contractField(
 					"CreatedAt",
 					(*time.Time)(nil),
@@ -203,6 +205,8 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 				contractField("Content", "", "content", "content"),
 				contractField("Likes", int64(0), "likes", "likes"),
 				contractField("Dislikes", int64(0), "dislikes", "dislikes"),
+				contractField("AuthorName", "", "author_name", "author_name"),
+				contractField("AuthorUsername", "", "author_username", "author_username"),
 				contractField(
 					"CreatedAt",
 					(*time.Time)(nil),

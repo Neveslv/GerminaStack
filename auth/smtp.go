@@ -175,7 +175,7 @@ func (m *SMTPMailer) wireMessage(message Message) ([]byte, error) {
 	builder.WriteString("\r\nSubject: ")
 	builder.WriteString(subject)
 	builder.WriteString("\r\nMIME-Version: 1.0")
-	builder.WriteString("\r\nContent-Type: text/plain; charset=UTF-8")
+	builder.WriteString("\r\nContent-Type: text/html; charset=UTF-8")
 	builder.WriteString("\r\nContent-Transfer-Encoding: quoted-printable")
 	builder.WriteString("\r\n\r\n")
 

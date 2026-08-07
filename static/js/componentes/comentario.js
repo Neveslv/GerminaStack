@@ -7,7 +7,7 @@
  */
 
 import { criarElemento } from '../utils/dom.js';
-import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
+import { aplicarImagemNoAvatar, corDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
 import { criarComentario as enviarComentario, buscarMinhaReacao } from '../api.js';
@@ -18,7 +18,7 @@ function criarAvatar(autor) {
         texto: inicialDoNome(autor.name),
         atributos: { 'aria-hidden': 'true' }
     });
-    avatar.style.background = corDoAutor(autor.id);
+    if (!aplicarImagemNoAvatar(avatar, autor)) avatar.style.background = corDoAutor(autor.id);
     return avatar;
 }
 

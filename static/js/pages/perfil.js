@@ -9,7 +9,7 @@
 import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, sair } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
-import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
+import { aplicarImagemNoAvatar, corDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataCompleta } from '../utils/data.js';
 
 const cartao = document.querySelector('#cartao-perfil');
@@ -29,7 +29,7 @@ function montarCartao(usuario) {
         texto: inicialDoNome(usuario.name),
         atributos: { 'aria-hidden': 'true' }
     });
-    avatar.style.background = corDoAutor(usuario.id);
+    if (!aplicarImagemNoAvatar(avatar, usuario)) avatar.style.background = corDoAutor(usuario.id);
 
     const identificacao = criarElemento('div', { classe: 'gs-stack' });
     identificacao.append(

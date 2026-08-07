@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -35,7 +36,7 @@ func TestMigrateExecutesCoreSchemaBeforeTwoFactorChallengeSchema(t *testing.T) {
 	usersAdminPattern := regexp.QuoteMeta("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin")
 	seedPattern := regexp.QuoteMeta("INSERT INTO years (year)")
 	notificationsPattern := regexp.QuoteMeta("CREATE OR REPLACE FUNCTION notify_mentions()")
-	frokPattern := regexp.QuoteMeta("INSERT INTO users (id_year, name, username, email, password)")
+	frokPattern := regexp.QuoteMeta("INSERT INTO users (id_year, name, username, email, password, profile_image_url, profile_image_description)")
 	mock.ExpectExec(corePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(upgradePattern).WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectExec(twoFactorPattern).WillReturnResult(sqlmock.NewResult(0, 0))
@@ -59,6 +60,12 @@ func TestMigrateExecutesCoreSchemaBeforeTwoFactorChallengeSchema(t *testing.T) {
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("SQL expectations: %v", err)
+	}
+}
+
+func TestFrokUserMigrationSetsDefaultProfileImage(t *testing.T) {
+	if !strings.Contains(frokUserMigration, "'/static/images/frok-profile.jpeg'") {
+		t.Fatal("Frok migration does not set the default profile image")
 	}
 }
 

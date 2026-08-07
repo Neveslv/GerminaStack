@@ -151,15 +151,23 @@ func smtpContextError(ctx context.Context, operation string, err error) error {
 }
 
 func (m *SMTPMailer) wireMessage(message Message) ([]byte, error) {
-	if strings.ContainsAny(message.To+message.Subject, "\r\n") {
+	return wireMessage(m.config.FromAddress, m.config.FromName, message)
+}
+
+func wireMessage(fromAddress, fromName string, message Message) ([]byte, error) {
+	if strings.ContainsAny(fromAddress+fromName+message.To+message.Subject, "\r\n") {
 		return nil, errors.New("invalid mail headers")
+	}
+	sender, err := mail.ParseAddress(fromAddress)
+	if err != nil || sender.Address != fromAddress {
+		return nil, errors.New("invalid mail sender")
 	}
 	recipient, err := mail.ParseAddress(message.To)
 	if err != nil || recipient.Address != message.To {
 		return nil, errors.New("invalid mail recipient")
 	}
 
-	from := (&mail.Address{Name: m.config.FromName, Address: m.config.FromAddress}).String()
+	from := (&mail.Address{Name: fromName, Address: sender.Address}).String()
 	subject := mime.QEncoding.Encode("UTF-8", message.Subject)
 	var builder strings.Builder
 	builder.WriteString("From: ")
@@ -171,7 +179,7 @@ func (m *SMTPMailer) wireMessage(message Message) ([]byte, error) {
 	builder.WriteString("\r\nMessage-ID: <")
 	builder.WriteString(strconv.FormatInt(time.Now().UnixNano(), 10))
 	builder.WriteString("@germinastack>\r\nReply-To: ")
-	builder.WriteString(m.config.FromAddress)
+	builder.WriteString(sender.Address)
 	builder.WriteString("\r\nSubject: ")
 	builder.WriteString(subject)
 	builder.WriteString("\r\nMIME-Version: 1.0")

@@ -15,6 +15,9 @@ var mentionPattern = regexp.MustCompile(`(?i)(^|[^[:alnum:]_])@frok($|[^[:alnum:
 type Repository interface {
 	BotUserID(context.Context) (int64, error)
 	Username(context.Context, int64) (string, error)
+	GetPost(context.Context, int64) (model.Post, error)
+	GetComment(context.Context, int64) (model.Comment, error)
+	ListReplies(context.Context, int64) ([]model.CommentOnComment, error)
 	CreateComment(context.Context, int64, int64, string) error
 	CreateReply(context.Context, int64, int64, string) error
 }
@@ -49,12 +52,44 @@ func (s *Service) DispatchComment(authorID int64, comment model.Comment) {
 	if !IsMentioned(comment.Content) {
 		return
 	}
-	go s.respond(authorID, 0, comment.ID, "Comentário: "+comment.Content)
+	go s.respondToThread(authorID, comment.ID)
+}
+
+func (s *Service) DispatchReply(authorID int64, reply model.CommentOnComment) {
+	if !IsMentioned(reply.Content) {
+		return
+	}
+	go s.respondToThread(authorID, reply.CommentID)
 }
 
 func (s *Service) respond(authorID, postID, commentID int64, input string) {
 	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
 	defer cancel()
+	s.respondWithContext(ctx, authorID, postID, commentID, input)
+}
+
+func (s *Service) respondToThread(authorID, commentID int64) {
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+	comment, err := s.repository.GetComment(ctx, commentID)
+	if err != nil {
+		s.report(err)
+		return
+	}
+	post, err := s.repository.GetPost(ctx, comment.PostID)
+	if err != nil {
+		s.report(err)
+		return
+	}
+	replies, err := s.repository.ListReplies(ctx, commentID)
+	if err != nil {
+		s.report(err)
+		return
+	}
+	s.respondWithContext(ctx, authorID, 0, commentID, threadContext(post, comment, replies))
+}
+
+func (s *Service) respondWithContext(ctx context.Context, authorID, postID, commentID int64, input string) {
 	username, err := s.repository.Username(ctx, authorID)
 	if err != nil {
 		s.report(err)
@@ -92,6 +127,28 @@ func postContext(post model.Post) string {
 		context += "\n\nDescrição da imagem (alt): " + strings.TrimSpace(*post.ImageDescription)
 	}
 	return context
+}
+
+func threadContext(post model.Post, comment model.Comment, replies []model.CommentOnComment) string {
+	context := postContext(post) + "\n\nComentário relacionado de " + authorLabel(comment.AuthorName, comment.AuthorUsername) + ": " + comment.Content
+	if len(replies) == 0 {
+		return context
+	}
+	context += "\n\nRespostas relacionadas:"
+	for _, reply := range replies {
+		context += "\n- " + authorLabel(reply.AuthorName, reply.AuthorUsername) + ": " + reply.Content
+	}
+	return context
+}
+
+func authorLabel(name, username string) string {
+	if username != "" {
+		return "@" + username
+	}
+	if name != "" {
+		return name
+	}
+	return "Usuário"
 }
 
 func (s *Service) report(err error) {

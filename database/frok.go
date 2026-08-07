@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"germinaStack/model"
 )
 
 type PostgresFrokRepository struct {
@@ -30,6 +32,19 @@ func (r *PostgresFrokRepository) Username(ctx context.Context, userID int64) (st
 		return "", fmt.Errorf("get Frok recipient: %w", err)
 	}
 	return username, nil
+}
+
+func (r *PostgresFrokRepository) GetPost(ctx context.Context, postID int64) (model.Post, error) {
+	return NewPostgresDiscussionRepository(r.db).GetPost(ctx, postID)
+}
+
+func (r *PostgresFrokRepository) GetComment(ctx context.Context, commentID int64) (model.Comment, error) {
+	return NewPostgresDiscussionRepository(r.db).GetComment(ctx, commentID)
+}
+
+func (r *PostgresFrokRepository) ListReplies(ctx context.Context, commentID int64) ([]model.CommentOnComment, error) {
+	// ponytail: 50 replies keep one Groq prompt bounded; add token budgeting if threads grow beyond this.
+	return NewPostgresDiscussionRepository(r.db).ListReplies(ctx, commentID, Pagination{Page: 1, PageSize: 50})
 }
 
 func (r *PostgresFrokRepository) CreateComment(ctx context.Context, userID, postID int64, content string) error {

@@ -236,6 +236,9 @@ func (h *DiscussionHandler) CreateReply(c *gin.Context) {
 		writeDiscussionError(c, err)
 		return
 	}
+	if h.frok != nil {
+		h.frok.DispatchReply(userID, reply)
+	}
 	c.JSON(http.StatusCreated, reply)
 }
 

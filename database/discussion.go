@@ -179,7 +179,7 @@ func (r *PostgresDiscussionRepository) ListComments(ctx context.Context, postID 
 	const query = `SELECT c.id, c.id_post, c.id_user, c.content, c.likes, c.dislikes, u.name, u.username, c.created_at
 FROM comments c JOIN users u ON u.id = c.id_user
 WHERE c.id_post = $1
-ORDER BY c.created_at DESC, c.id DESC
+ORDER BY c.created_at ASC, c.id ASC
 LIMIT $2 OFFSET $3`
 	rows, err := r.db.QueryContext(ctx, query, postID, pagination.PageSize, pageOffset(pagination))
 	if err != nil {
@@ -204,7 +204,7 @@ func (r *PostgresDiscussionRepository) ListReplies(ctx context.Context, commentI
 	const query = `SELECT c.id, c.id_comment, c.id_user, c.content, c.likes, c.dislikes, u.name, u.username, c.created_at
 FROM comments_on_comments c JOIN users u ON u.id = c.id_user
 WHERE c.id_comment = $1
-ORDER BY c.created_at DESC, c.id DESC
+ORDER BY c.created_at ASC, c.id ASC
 LIMIT $2 OFFSET $3`
 	rows, err := r.db.QueryContext(ctx, query, commentID, pagination.PageSize, pageOffset(pagination))
 	if err != nil {

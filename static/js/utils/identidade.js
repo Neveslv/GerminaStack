@@ -25,8 +25,13 @@ export function inicialDoNome(nome) {
     return String(nome || '?').trim().charAt(0).toUpperCase();
 }
 
+export function fotoDoAutor(autor) {
+    const identificador = String(autor?.username || autor?.name || '').trim().toLowerCase();
+    return autor?.profile_image_url || (identificador === 'frok' ? FOTO_DO_FROK : null);
+}
+
 export function aplicarImagemNoAvatar(avatar, autor) {
-    const url = autor.profile_image_url || (autor.username === 'frok' ? FOTO_DO_FROK : null);
+    const url = fotoDoAutor(autor);
     if (!url) return false;
 
     const imagem = document.createElement('img');

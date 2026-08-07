@@ -388,7 +388,7 @@ export async function salvarPreferencias(preferencias) {
 let perfilAtual;
 const reacoesDaSessao = new Map();
 
-async function buscarMeuPerfil() {
+export async function buscarMeuPerfil() {
     perfilAtual ??= requisitar('/api/me').catch((erro) => {
         perfilAtual = null;
         throw erro;

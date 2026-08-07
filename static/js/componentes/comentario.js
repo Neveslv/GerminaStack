@@ -100,7 +100,7 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
             type: 'text',
             id: idCampo,
             name: 'resposta',
-            placeholder: 'Responder este comentário',
+            placeholder: 'Responder ou colar um link direto de GIF',
             autocomplete: 'off',
             maxlength: '500'
         }

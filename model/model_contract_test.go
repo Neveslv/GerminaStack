@@ -162,6 +162,8 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 				contractField("CommentsCount", int64(0), "comments_count", "comments_count"),
 				contractField("AuthorName", "", "author_name", "author_name"),
 				contractField("AuthorUsername", "", "author_username", "author_username"),
+				contractField("AuthorImageURL", (*string)(nil), "author_image_url", "author_image_url"),
+				contractField("AuthorImageDescription", (*string)(nil), "author_image_description", "author_image_description"),
 				contractField(
 					"CreatedAt",
 					(*time.Time)(nil),

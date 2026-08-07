@@ -35,8 +35,15 @@ function criarBolha(item, classeBolha) {
         })
     );
 
+    const texto = criarElemento('p');
+    const partes = item.content.split(/(https?:\/\/\S+\.gif(?:\?\S*)?)/gi);
+    partes.forEach((parte) => {
+        if (/^https?:\/\/\S+\.gif(?:\?\S*)?$/i.test(parte)) {
+            texto.append(criarElemento('img', { atributos: { src: parte, alt: 'GIF enviado na resposta', loading: 'lazy' } }));
+        } else texto.append(document.createTextNode(parte));
+    });
     const bolha = criarElemento('div', { classe: classeBolha });
-    bolha.append(meta, criarElemento('p', { texto: item.content }));
+    bolha.append(meta, texto);
     return bolha;
 }
 

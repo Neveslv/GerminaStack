@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"germinaStack/model"
 )
@@ -78,10 +79,39 @@ func (s *Service) DispatchComment(authorID int64, comment model.Comment) {
 }
 
 func (s *Service) DispatchReply(authorID int64, reply model.CommentOnComment) {
-	if !IsMentioned(reply.Content) {
+	if !IsMentioned(reply.Content) && !s.repliedInThread(reply.CommentID) {
 		return
 	}
 	go s.respondToThread(authorID, reply.CommentID, reply.Content)
+}
+
+func (s *Service) repliedInThread(commentID int64) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), s.timeout)
+	defer cancel()
+	botID, err := s.repository.BotUserID(ctx)
+	if err != nil {
+		s.report(err)
+		return false
+	}
+	comment, err := s.repository.GetComment(ctx, commentID)
+	if err != nil {
+		s.report(err)
+		return false
+	}
+	if comment.UserID == botID {
+		return true
+	}
+	replies, err := s.repository.ListReplies(ctx, commentID)
+	if err != nil {
+		s.report(err)
+		return false
+	}
+	for _, item := range replies {
+		if item.UserID == botID {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) respond(authorID, postID, commentID int64, input, memoryPrompt string) {
@@ -172,7 +202,12 @@ func shortenMemory(value string) string {
 }
 
 func formatReply(username, reply string) string {
-	reply = strings.TrimSpace(strings.ReplaceAll(reply, "@", "＠"))
+	reply = strings.ToValidUTF8(reply, "")
+	reply = strings.NewReplacer("@", "＠", "\\", "", "`", "", "*", "").Replace(reply)
+	if !utf8.ValidString(reply) {
+		reply = "Não consegui montar uma resposta em texto simples."
+	}
+	reply = strings.TrimSpace(reply)
 	return "@" + username + " " + reply
 }
 

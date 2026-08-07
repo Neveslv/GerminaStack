@@ -35,7 +35,7 @@ function montarCartao(usuario) {
             atributos: { 'aria-hidden': 'true' }
         });
     if (foto) avatar.style.objectFit = 'cover';
-    avatar.style.background = corDoAutor(usuario.id);
+    else avatar.style.background = corDoAutor(usuario.id);
 
     const identificacao = criarElemento('div', { classe: 'gs-stack' });
     identificacao.append(
@@ -110,7 +110,8 @@ function montarCartao(usuario) {
             }
         });
         cartao.append(formulario);
-        const acoes = criarElemento('div', { classe: 'gs-cluster' });
+        const acoes = criarElemento('div', { classe: 'gs-cluster profile-actions' });
+        acoes.style.gap = 'var(--gs-space-3)';
         const botaoSair = criarElemento('button', {
             classe: 'gs-btn gs-btn-ghost',
             texto: 'Sair',

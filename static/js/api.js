@@ -396,9 +396,9 @@ export async function buscarMeuPerfil() {
     return perfilAtual;
 }
 
-function normalizarAutor(id, usuario, name, username) {
-    if (id === usuario.id) return usuario;
-    return { id, name: name || `Usuário #${id}`, username: username || null };
+function normalizarAutor(id, usuario, name, username, imageUrl, imageDescription) {
+	if (id === usuario.id) return usuario;
+	return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
 }
 
 function normalizarMensagem(item, usuario) {
@@ -408,7 +408,7 @@ function normalizarMensagem(item, usuario) {
 function normalizarPost(post, materias, usuario) {
     return {
         ...post,
-        author: normalizarAutor(post.id_user, usuario, post.author_name, post.author_username),
+		author: normalizarAutor(post.id_user, usuario, post.author_name, post.author_username, post.author_image_url, post.author_image_description),
         subject: materias.find((materia) => materia.id === post.id_subject) ?? {
             id: post.id_subject,
             subject: 'Matéria'

@@ -42,7 +42,7 @@ func (s *Service) DispatchPost(authorID int64, post model.Post) {
 	if !IsMentioned(post.Title + "\n" + post.Content) {
 		return
 	}
-	go s.respond(authorID, post.ID, 0, fmt.Sprintf("Título: %s\n\nPost: %s", post.Title, post.Content))
+	go s.respond(authorID, post.ID, 0, postContext(post))
 }
 
 func (s *Service) DispatchComment(authorID int64, comment model.Comment) {
@@ -84,6 +84,14 @@ func (s *Service) respond(authorID, postID, commentID int64, input string) {
 func formatReply(username, reply string) string {
 	reply = strings.TrimSpace(strings.ReplaceAll(reply, "@", "＠"))
 	return "@" + username + " " + reply
+}
+
+func postContext(post model.Post) string {
+	context := fmt.Sprintf("Título: %s\n\nPost: %s", post.Title, post.Content)
+	if post.ImageDescription != nil && strings.TrimSpace(*post.ImageDescription) != "" {
+		context += "\n\nDescrição da imagem (alt): " + strings.TrimSpace(*post.ImageDescription)
+	}
+	return context
 }
 
 func (s *Service) report(err error) {

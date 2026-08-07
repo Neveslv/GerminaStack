@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"germinaStack/model"
 )
 
 func TestIsMentionedMatchesOnlyFrok(t *testing.T) {
@@ -40,6 +42,15 @@ func TestServiceCreatesCommentForMentionedPost(t *testing.T) {
 	service.respond(42, 8, 0, "Post: @frok")
 	if repository.commentPostID != 8 || repository.commentUserID != 7 || repository.commentContent != "@ana Use uma chave primária." {
 		t.Fatalf("comment = %#v", repository)
+	}
+}
+
+func TestPostContextIncludesImageDescription(t *testing.T) {
+	t.Parallel()
+	description := "Diagrama com as tabelas e chaves estrangeiras."
+	context := postContext(model.Post{Title: "Dúvida", Content: "@frok explica", ImageDescription: &description})
+	if context != "Título: Dúvida\n\nPost: @frok explica\n\nDescrição da imagem (alt): Diagrama com as tabelas e chaves estrangeiras." {
+		t.Fatalf("postContext() = %q", context)
 	}
 }
 

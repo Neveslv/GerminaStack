@@ -36,6 +36,9 @@ type FrokConfig struct {
 }
 
 func Load() (Config, error) {
+	if err := loadDotEnv(); err != nil {
+		return Config{}, err
+	}
 	databaseURL, err := required("DATABASE_URL")
 	if err != nil {
 		return Config{}, err
@@ -145,6 +148,26 @@ func Load() (Config, error) {
 		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
 		GoogleRefreshToken: strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
 	}, nil
+}
+
+func loadDotEnv() error {
+	content, err := os.ReadFile(".env")
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read .env: %w", err)
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if !ok || key == "" || strings.HasPrefix(key, "#") {
+			continue
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			_ = os.Setenv(key, strings.Trim(strings.TrimSpace(value), "\"'"))
+		}
+	}
+	return nil
 }
 
 func valueOrDefault(name, fallback string) string {

@@ -50,7 +50,7 @@ func TestPostContextIncludesImageDescription(t *testing.T) {
 	t.Parallel()
 	description := "Diagrama com as tabelas e chaves estrangeiras."
 	context := postContext(model.Post{Title: "Dúvida", Content: "@frok explica", ImageDescription: &description})
-	if context != "Título: Dúvida\n\nPost: @frok explica\n\nDescrição da imagem (alt): Diagrama com as tabelas e chaves estrangeiras." {
+	if context != "PERGUNTA PRINCIPAL: Dúvida\n\nCONTEXTO DO POST: @frok explica\n\nDescrição da imagem (alt): Diagrama com as tabelas e chaves estrangeiras." {
 		t.Fatalf("postContext() = %q", context)
 	}
 }
@@ -66,7 +66,7 @@ func TestThreadContextIncludesRelatedMessages(t *testing.T) {
 			{Content: "@frok e o isolamento?", AuthorUsername: "carla"},
 		},
 	)
-	want := "Título: Transação\n\nPost: @frok explica\n\nDescrição da imagem (alt): Fluxo entre cliente e banco.\n\nComentário relacionado de @ana: Minha dúvida é sobre commit.\n\nRespostas relacionadas:\n- @bruno: O rollback desfaz.\n- @carla: @frok e o isolamento?"
+	want := "PERGUNTA PRINCIPAL: Transação\n\nCONTEXTO DO POST: @frok explica\n\nDescrição da imagem (alt): Fluxo entre cliente e banco.\n\nComentário relacionado de @ana: Minha dúvida é sobre commit.\n\nHISTÓRICO DA THREAD:\n@bruno: O rollback desfaz.\n@carla: @frok e o isolamento?\n\nMensagem mais recente que você deve responder: @carla: @frok e o isolamento?"
 	if context != want {
 		t.Fatalf("threadContext() = %q", context)
 	}
@@ -87,7 +87,7 @@ func TestServiceRepliesToMentionedThreadWithItsContext(t *testing.T) {
 	if repository.replyCommentID != 9 || repository.replyContent != "@ana Resposta do Frok" {
 		t.Fatalf("reply = %#v", repository)
 	}
-	if client.input != "Título: Transação\n\nPost: Texto do post\n\nComentário relacionado de @ana: @frok explique\n\nRespostas relacionadas:\n- @bruno: Primeira resposta" {
+	if client.input != "PERGUNTA PRINCIPAL: Transação\n\nCONTEXTO DO POST: Texto do post\n\nComentário relacionado de @ana: @frok explique\n\nHISTÓRICO DA THREAD:\n@bruno: Primeira resposta\n\nMensagem mais recente que você deve responder: @bruno: Primeira resposta" {
 		t.Fatalf("Frok input = %q", client.input)
 	}
 }

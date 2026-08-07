@@ -203,6 +203,7 @@ func shortenMemory(value string) string {
 
 func formatReply(username, reply string) string {
 	reply = strings.ToValidUTF8(reply, "")
+	reply = regexp.MustCompile(`(?im)^https?://\S+\.gif(?:\?\S*)?\s*$`).ReplaceAllString(reply, "")
 	reply = strings.NewReplacer("@", "＠", "\\", "", "`", "", "*", "").Replace(reply)
 	if !utf8.ValidString(reply) {
 		reply = "Não consegui montar uma resposta em texto simples."
@@ -212,7 +213,7 @@ func formatReply(username, reply string) string {
 }
 
 func postContext(post model.Post) string {
-	context := fmt.Sprintf("Título: %s\n\nPost: %s", post.Title, post.Content)
+	context := fmt.Sprintf("PERGUNTA PRINCIPAL: %s\n\nCONTEXTO DO POST: %s", post.Title, post.Content)
 	if post.ImageDescription != nil && strings.TrimSpace(*post.ImageDescription) != "" {
 		context += "\n\nDescrição da imagem (alt): " + strings.TrimSpace(*post.ImageDescription)
 	}
@@ -224,11 +225,12 @@ func threadContext(post model.Post, comment model.Comment, replies []model.Comme
 	if len(replies) == 0 {
 		return context
 	}
-	context += "\n\nRespostas relacionadas:"
+	context += "\n\nHISTÓRICO DA THREAD:"
 	for _, reply := range replies {
-		context += "\n- " + authorLabel(reply.AuthorName, reply.AuthorUsername) + ": " + reply.Content
+		context += "\n" + authorLabel(reply.AuthorName, reply.AuthorUsername) + ": " + reply.Content
 	}
-	return context
+	last := replies[len(replies)-1]
+	return context + "\n\nMensagem mais recente que você deve responder: " + authorLabel(last.AuthorName, last.AuthorUsername) + ": " + last.Content
 }
 
 func authorLabel(name, username string) string {

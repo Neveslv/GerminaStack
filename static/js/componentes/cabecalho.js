@@ -21,6 +21,7 @@
  */
 
 import {
+	buscarMeuPerfil,
     buscarPreferencias,
     listarNotificacoes,
     marcarNotificacoesComoLidas
@@ -57,6 +58,29 @@ async function sincronizarPreferencias() {
         // Sem resposta do servidor a tela continua com o tema local. Falhar aqui
         // não pode derrubar a página: preferência é acessório, conteúdo não é.
     }
+}
+
+function adicionarAdministracao() {
+    const nav = document.querySelector('.gs-nav');
+    const perfil = nav?.querySelector('a[href="/perfil"]');
+    if (!nav || !perfil || nav.querySelector('a[href="/admin"]')) return;
+    const link = criarElemento('a', {
+            classe: `gs-nav-link${window.location.pathname === '/admin' ? ' is-active' : ''}`,
+            texto: 'Administração',
+            atributos: { href: '/admin' }
+    });
+    if (window.location.pathname === '/admin') link.setAttribute('aria-current', 'page');
+    nav.insertBefore(link, perfil);
+}
+
+async function mostrarAdministracao() {
+    if (sessionStorage.getItem('gs_admin') === '1') adicionarAdministracao();
+    try {
+        const usuario = await buscarMeuPerfil();
+        const admin = usuario.is_admin || ['nicolas.oliveira', 'matheus.fazan'].includes(usuario.username);
+        sessionStorage.setItem('gs_admin', admin ? '1' : '0');
+        if (admin) adicionarAdministracao();
+    } catch {}
 }
 
 function criarItemDeNotificacao(notificacao) {
@@ -180,3 +204,4 @@ async function carregarNotificacoes() {
 
 sincronizarPreferencias();
 carregarNotificacoes();
+mostrarAdministracao();

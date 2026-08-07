@@ -21,6 +21,7 @@ type Credential struct {
 	Email        string
 	PasswordHash string
 	IsAdmin      bool
+	IsBanned     bool
 }
 
 type UserRegistration struct {
@@ -48,21 +49,21 @@ func NewPostgresCredentialRepository(db *sql.DB) *PostgresCredentialRepository {
 }
 
 func (r *PostgresCredentialRepository) FindByUsername(ctx context.Context, username string) (Credential, error) {
-	const query = `SELECT id, username, email, password, is_admin
+	const query = `SELECT id, username, email, password, is_admin, is_banned
 FROM users
 WHERE username = $1`
 	return r.findCredential(ctx, query, username)
 }
 
 func (r *PostgresCredentialRepository) FindByEmail(ctx context.Context, email string) (Credential, error) {
-	const query = `SELECT id, username, email, password, is_admin
+	const query = `SELECT id, username, email, password, is_admin, is_banned
 FROM users
 WHERE email = $1`
 	return r.findCredential(ctx, query, email)
 }
 
 func (r *PostgresCredentialRepository) FindByID(ctx context.Context, userID int64) (Credential, error) {
-	const query = `SELECT id, username, email, password, is_admin
+	const query = `SELECT id, username, email, password, is_admin, is_banned
 FROM users
 WHERE id = $1`
 	return r.findCredential(ctx, query, userID)
@@ -76,6 +77,7 @@ func (r *PostgresCredentialRepository) findCredential(ctx context.Context, query
 		&credential.Email,
 		&credential.PasswordHash,
 		&credential.IsAdmin,
+		&credential.IsBanned,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Credential{}, ErrCredentialNotFound

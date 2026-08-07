@@ -57,13 +57,6 @@
     <main class="gs-page" id="conteudo-principal">
         <section class="gs-hero">
             <div>
-                <span class="gs-kicker">Comunidade Germinare</span>
-                <h1>O que a turma aprendeu em sala, germina aqui.</h1>
-                <p>
-                    Um espaço para tirar dúvidas, compartilhar resumos e revisar conteúdo com quem está
-                    na mesma matéria que você — sem se perder em grupo de WhatsApp.
-                </p>
-
                 <div class="gs-hero-stats" id="estatisticas">
                     <span><strong id="stat-posts">—</strong> publicações</span>
                     <span><strong id="stat-materias">—</strong> matérias ativas</span>
@@ -75,15 +68,21 @@
                 </div>
 
                 <section class="trending-posts" aria-labelledby="titulo-em-alta">
-                    <h2 id="titulo-em-alta">Em alta agora</h2>
-                    <div id="trending-posts" aria-live="polite"></div>
+                    <div class="trending-head">
+                        <h2 id="titulo-em-alta">Em alta agora</h2>
+                    </div>
+                    <div class="trending-slider">
+                        <button type="button" data-trending-anterior aria-label="Post anterior">‹</button>
+                        <div id="trending-posts" aria-live="polite"></div>
+                        <button type="button" data-trending-proximo aria-label="Próximo post">›</button>
+                    </div>
                 </section>
             </div>
         </section>
 
         <div class="gs-layout-demo">
             <div class="gs-stack">
-                <label class="gs-form-group" for="busca">
+                <label class="gs-form-group feed-search" for="busca">
                     <span class="gs-label">Buscar publicação</span>
                     <input class="gs-input" type="search" id="busca" name="busca"
                         placeholder="Ex.: equação, fotossíntese, análise sintática" autocomplete="off"

@@ -9,6 +9,9 @@ const campoImagem = document.querySelector('#imagem');
 const campoDescricaoImagem = document.querySelector('#descricao-imagem');
 const erroImagem = document.querySelector('#erro-imagem');
 const erroDescricaoImagem = document.querySelector('#erro-descricao-imagem');
+const previewImagem = document.querySelector('#preview-imagem');
+const conteudoPreviewImagem = document.querySelector('#preview-imagem-conteudo');
+const statusPreviewImagem = document.querySelector('#preview-imagem-status');
 const estado = criarPainelDeEstado(document.querySelector('#estado-formulario'));
 
 const REGRAS = [
@@ -16,6 +19,30 @@ const REGRAS = [
     { campo: 'titulo', erro: 'erro-titulo', mensagem: 'Escreva um título para a publicação.' },
     { campo: 'conteudo-post', erro: 'erro-conteudo', mensagem: 'Escreva o conteúdo da publicação.' }
 ];
+
+function atualizarPreviewImagem() {
+    const imagem = campoImagem.value.trim();
+    const valida = /^https?:\/\/.+/i.test(imagem);
+    previewImagem.hidden = !valida;
+    if (!valida) return;
+
+    erroImagem.textContent = '';
+    statusPreviewImagem.textContent = 'Carregando prévia…';
+    conteudoPreviewImagem.src = imagem;
+    conteudoPreviewImagem.alt = campoDescricaoImagem.value.trim() || 'Prévia da mídia';
+}
+
+campoImagem.addEventListener('input', atualizarPreviewImagem);
+campoImagem.addEventListener('change', atualizarPreviewImagem);
+campoImagem.addEventListener('paste', () => setTimeout(atualizarPreviewImagem));
+campoDescricaoImagem.addEventListener('input', atualizarPreviewImagem);
+conteudoPreviewImagem.addEventListener('load', () => { statusPreviewImagem.textContent = ''; });
+conteudoPreviewImagem.addEventListener('error', () => {
+    statusPreviewImagem.textContent = 'O provedor bloqueou a prévia. Use um link direto da imagem ou GIF.';
+    erroImagem.textContent = 'Não foi possível carregar esta mídia.';
+});
+
+window.addEventListener('pageshow', atualizarPreviewImagem);
 
 function limparErros() {
     REGRAS.forEach(({ campo, erro }) => {

@@ -77,6 +77,7 @@ func run() error {
 	catalog := database.NewPostgresCatalogRepository(db)
 	discussion := database.NewPostgresDiscussionRepository(db)
 	account := database.NewPostgresAccountRepository(db)
+	admin := database.NewPostgresAdminRepository(db)
 	var frokService *frok.Service
 	if cfg.Frok.APIKey != "" {
 		memory := frok.MemoryStore(frok.NoopMemoryStore{})
@@ -105,7 +106,8 @@ func run() error {
 	catalogHandler := handlers.NewCatalogHandler(catalog, cfg.AuthOperationTimeout)
 	discussionHandler := handlers.NewDiscussionHandler(discussion, cfg.AuthOperationTimeout, frokService)
 	accountHandler := handlers.NewAccountHandler(account, cfg.AuthOperationTimeout)
-	router := routes.NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, accountHandler, cfg.JWTSecret)
+	adminHandler := handlers.NewAdminHandler(admin, cfg.AuthOperationTimeout)
+	router := routes.NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, accountHandler, cfg.JWTSecret, adminHandler)
 
 	server := newHTTPServer(cfg.HTTPAddr, router, cfg.AuthOperationTimeout)
 	serverErrors := make(chan error, 1)

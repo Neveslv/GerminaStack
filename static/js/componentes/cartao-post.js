@@ -166,7 +166,16 @@ export function criarCartaoDePost(post, { minhaReacao = null, destaque = false }
                 loading: 'lazy'
             }
         });
-        midia.append(imagem);
+        const ampliar = criarElemento('a', {
+            atributos: {
+                href: post.image_url,
+                target: '_blank',
+                rel: 'noopener',
+                'aria-label': 'Abrir imagem ou GIF em tamanho maior'
+            }
+        });
+        ampliar.append(imagem);
+        midia.append(ampliar);
         if (descricao) midia.append(criarElemento('figcaption', { texto: descricao }));
         corpo.append(midia);
     }

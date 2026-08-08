@@ -82,7 +82,7 @@ func (s *Service) StartLogin(ctx context.Context, email, password string) (strin
 	if err != nil {
 		return "", ErrUnavailable
 	}
-	if err := CheckPassword(credential.PasswordHash, password); err != nil {
+	if credential.IsBanned || CheckPassword(credential.PasswordHash, password) != nil {
 		return "", ErrInvalidCredentials
 	}
 
@@ -151,6 +151,9 @@ func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (
 		credential, findErr := s.credentials.FindByID(ctx, userID)
 		if findErr != nil {
 			return Principal{}, ErrUnavailable
+		}
+		if credential.IsBanned {
+			return Principal{}, ErrInvalidCredentials
 		}
 		return Principal{ID: credential.ID, IsAdmin: credential.IsAdmin}, nil
 	case errors.Is(err, database.ErrInvalidCode), errors.Is(err, database.ErrChallengeNotFound):

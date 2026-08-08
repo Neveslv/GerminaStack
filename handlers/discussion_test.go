@@ -69,7 +69,7 @@ func TestDiscussionHandlerReactsOnlyForAuthenticatedUserWithValidPayload(t *test
 	repository := &discussionRepositoryFake{}
 	handler := NewDiscussionHandler(repository, time.Second)
 	valid := performDiscussionRequest(handler.React("comment"), http.MethodPut, "/api/comments/6/reaction", `{"reaction_type":"like"}`, 42)
-	if valid.Code != http.StatusNoContent || repository.reactionUserID != 42 || repository.reactionMessageID != 6 || repository.reactionMessageType != "comment" || repository.reactionType != model.ReactionTypeLike {
+	if valid.Code != http.StatusOK || repository.reactionUserID != 42 || repository.reactionMessageID != 6 || repository.reactionMessageType != "comment" || repository.reactionType != model.ReactionTypeLike {
 		t.Fatalf("reaction = %d/%#v", valid.Code, repository)
 	}
 	for _, tt := range []struct {

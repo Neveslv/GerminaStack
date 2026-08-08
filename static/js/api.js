@@ -61,7 +61,7 @@ export async function listarPosts({ idSubject } = {}) {
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    return posts.map((post) => normalizarPost(post, materias, usuario));
+    return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
 }
 
 export async function listarMaterias() {
@@ -128,13 +128,26 @@ export async function buscarUsuario(username) {
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
+export async function salvarPerfil(dados) {
+    return requisitar('/api/me', {
+        method: 'PATCH',
+        body: JSON.stringify(dados)
+    });
+}
+
+export async function listarUsuariosAdmin({ page = 1, q = '' } = {}) { return requisitar(`/api/admin/users?page=${page}&q=${encodeURIComponent(q)}`); }
+export async function listarPostsAdmin({ page = 1, q = '' } = {}) { return requisitar(`/api/admin/posts?page=${page}&q=${encodeURIComponent(q)}`); }
+export async function banirUsuario(id, enabled = true) { return requisitar(`/api/admin/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
+export async function definirAdmin(id, enabled) { return requisitar(`/api/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
+export async function excluirPost(id) { return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); }
+
 export async function listarPostsDoAutor(idAutor) {
     const [posts, materias, usuario] = await Promise.all([
         requisitar(`/api/posts?author_id=${idAutor}`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    return posts.map((post) => normalizarPost(post, materias, usuario));
+    return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
 }
 
 
@@ -150,7 +163,7 @@ export async function reagir({ tipo, id, reacao }) {
     const recurso = { post: 'posts', comment: 'comments', comment_on_comment: 'replies' }[tipo];
     const chave = `${tipo}:${id}`;
     const anterior = reacoesDaSessao.get(chave) ?? null;
-    await requisitar(`/api/${recurso}/${id}/reaction`, {
+    const atualizado = await requisitar(`/api/${recurso}/${id}/reaction`, {
         method: 'PUT',
         body: JSON.stringify({ reaction_type: reacao })
     });
@@ -158,8 +171,9 @@ export async function reagir({ tipo, id, reacao }) {
     reacoesDaSessao.set(chave, atual);
     return {
         reacao: atual,
-        likes: (atual === 'like' ? 1 : 0) - (anterior === 'like' ? 1 : 0),
-        dislikes: (atual === 'dislike' ? 1 : 0) - (anterior === 'dislike' ? 1 : 0)
+		likes: atualizado.likes,
+		dislikes: atualizado.dislikes,
+		absolutos: true
     };
 }
 
@@ -189,8 +203,9 @@ export async function salvarPreferencias(preferencias) {
 
 let perfilAtual;
 const reacoesDaSessao = new Map();
+const perfisPublicos = new Map();
 
-async function buscarMeuPerfil() {
+export async function buscarMeuPerfil() {
     perfilAtual ??= requisitar('/api/me').catch((erro) => {
         perfilAtual = null;
         throw erro;
@@ -198,19 +213,28 @@ async function buscarMeuPerfil() {
     return perfilAtual;
 }
 
-function normalizarAutor(id, usuario, name, username) {
-    if (id === usuario.id) return usuario;
-    return { id, name: name || `Usuário #${id}`, username: username || null };
+function normalizarAutor(id, usuario, name, username, imageUrl, imageDescription) {
+	if (id === usuario.id) return usuario;
+	return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
 }
 
 function normalizarMensagem(item, usuario) {
-    return { ...item, author: normalizarAutor(item.id_user, usuario) };
+    return { ...item, author: normalizarAutor(item.id_user, usuario, item.author_name, item.author_username) };
 }
 
-function normalizarPost(post, materias, usuario) {
+async function normalizarPost(post, materias, usuario) {
+    const author = normalizarAutor(post.id_user, usuario, post.author_name, post.author_username, post.author_image_url, post.author_image_description);
+    if (!author.profile_image_url && author.username) {
+        perfisPublicos.set(author.username, perfisPublicos.get(author.username) ?? buscarUsuario(author.username).catch(() => null));
+        const perfil = await perfisPublicos.get(author.username);
+        if (perfil?.profile_image_url) {
+            author.profile_image_url = perfil.profile_image_url;
+            author.profile_image_description = perfil.profile_image_description;
+        }
+    }
     return {
         ...post,
-        author: normalizarAutor(post.id_user, usuario, post.author_name, post.author_username),
+        author,
         subject: materias.find((materia) => materia.id === post.id_subject) ?? {
             id: post.id_subject,
             subject: 'Matéria'

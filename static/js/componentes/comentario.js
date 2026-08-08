@@ -1,5 +1,5 @@
 import { criarElemento } from '../utils/dom.js';
-import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
+import { aplicarImagemNoAvatar, corDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
 import { criarComentario as enviarComentario, buscarMinhaReacao } from '../api.js';
@@ -10,7 +10,7 @@ function criarAvatar(autor) {
         texto: inicialDoNome(autor.name),
         atributos: { 'aria-hidden': 'true' }
     });
-    avatar.style.background = corDoAutor(autor.id);
+    if (!aplicarImagemNoAvatar(avatar, autor)) avatar.style.background = corDoAutor(autor.id);
     return avatar;
 }
 
@@ -27,8 +27,15 @@ function criarBolha(item, classeBolha) {
         })
     );
 
+    const texto = criarElemento('p');
+    const partes = item.content.split(/(https?:\/\/\S+\.gif(?:\?\S*)?)/gi);
+    partes.forEach((parte) => {
+        if (/^https?:\/\/\S+\.gif(?:\?\S*)?$/i.test(parte)) {
+            texto.append(criarElemento('img', { atributos: { src: parte, alt: 'GIF enviado na resposta', loading: 'lazy' } }));
+        } else texto.append(document.createTextNode(parte));
+    });
     const bolha = criarElemento('div', { classe: classeBolha });
-    bolha.append(meta, criarElemento('p', { texto: item.content }));
+    bolha.append(meta, texto);
     return bolha;
 }
 
@@ -79,7 +86,7 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
             type: 'text',
             id: idCampo,
             name: 'resposta',
-            placeholder: 'Responder este comentário',
+            placeholder: 'Responder ou colar um link direto de GIF',
             autocomplete: 'off',
             maxlength: '500'
         }
@@ -173,6 +180,9 @@ export function criarComentario(comentario, minhaReacao = null) {
 
     const { formulario, campo } = criarFormularioDeResposta(comentario.id, (resposta) => {
         respostas.append(criarResposta(resposta));
+        if (comentario.author.username === 'frok') {
+            window.setTimeout(() => window.location.reload(), 2500);
+        }
     });
 
     item.append(formulario);

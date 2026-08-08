@@ -1,7 +1,7 @@
-import { buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, sair } from '../api.js';
+import { buscarMeuPerfil, buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, salvarPerfil, sair } from '../api.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
-import { corDoAutor, inicialDoNome } from '../utils/identidade.js';
+import { corDoAutor, fotoDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataCompleta } from '../utils/data.js';
 
 const cartao = document.querySelector('#cartao-perfil');
@@ -11,17 +11,23 @@ const estadoPerfil = criarPainelDeEstado(document.querySelector('#estado-perfil'
 const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
 
 const usuarioDaUrl = new URLSearchParams(window.location.search).get('usuario');
-let ehMeuPerfil = !usuarioDaUrl;
+let ehMeuPerfil = false;
 
 function montarCartao(usuario) {
     cartao.replaceChildren();
 
-    const avatar = criarElemento('span', {
-        classe: 'gs-avatar',
-        texto: inicialDoNome(usuario.name),
-        atributos: { 'aria-hidden': 'true' }
-    });
-    avatar.style.background = corDoAutor(usuario.id);
+    const foto = fotoDoAutor(usuario);
+    const avatar = foto
+        ? criarElemento('img', {
+            classe: 'gs-avatar',
+            atributos: { src: foto, alt: usuario.profile_image_description || `Foto de ${usuario.name}` }
+        })
+        : criarElemento('span', {
+            classe: 'gs-avatar', texto: inicialDoNome(usuario.name),
+            atributos: { 'aria-hidden': 'true' }
+        });
+    if (foto) avatar.style.objectFit = 'cover';
+    else avatar.style.background = corDoAutor(usuario.id);
 
     const identificacao = criarElemento('div', { classe: 'gs-stack' });
     identificacao.append(
@@ -68,7 +74,35 @@ function montarCartao(usuario) {
     cartao.append(cabecalho);
 
     if (ehMeuPerfil) {
-        const acoes = criarElemento('div', { classe: 'gs-cluster' });
+        const formulario = criarElemento('form', { classe: 'gs-stack' });
+        const url = criarElemento('input', {
+            classe: 'gs-input', atributos: { type: 'url', name: 'profile_image_url', placeholder: 'https://exemplo.com/minha-foto.jpg', value: usuario.profile_image_url || '', maxlength: '2000' }
+        });
+        const descricao = criarElemento('input', {
+            classe: 'gs-input', atributos: { type: 'text', name: 'profile_image_description', placeholder: 'Descreva sua foto', value: usuario.profile_image_description || '', maxlength: '200' }
+        });
+        const mensagem = criarElemento('span', { classe: 'gs-form-hint', texto: 'Use uma imagem pública. Deixe os dois campos vazios para remover a foto.' });
+        const salvar = criarElemento('button', { classe: 'gs-btn gs-btn-secondary', texto: 'Salvar foto', atributos: { type: 'submit' } });
+        formulario.append(
+            criarElemento('label', { classe: 'gs-form-group', texto: 'Foto de perfil' }),
+            url, descricao, mensagem, salvar
+        );
+        formulario.querySelector('label').append(url);
+        formulario.addEventListener('submit', async (evento) => {
+            evento.preventDefault();
+            const imagem = url.value.trim();
+            const texto = descricao.value.trim();
+            salvar.disabled = true;
+            try {
+                await salvarPerfil({ profile_image_url: imagem || null, profile_image_description: imagem ? texto : null });
+                window.location.reload();
+            } catch (erro) {
+                salvar.disabled = false;
+                window.GerminaStackUI?.showToast({ title: 'Não foi possível salvar', message: erro.message, tone: 'danger' });
+            }
+        });
+        cartao.append(formulario);
+        const acoes = criarElemento('div', { classe: 'gs-cluster profile-actions' });
         const botaoSair = criarElemento('button', {
             classe: 'gs-btn gs-btn-ghost',
             texto: 'Sair',
@@ -101,6 +135,11 @@ function montarCartao(usuario) {
             }),
             botaoSair
         );
+        if (usuario.is_admin || ['nicolas.oliveira', 'matheus.fazan'].includes(usuario.username)) {
+            acoes.prepend(criarElemento('a', {
+                classe: 'gs-btn gs-btn-secondary', texto: 'Administração', atributos: { href: '/admin' }
+            }));
+        }
         cartao.append(acoes);
     }
 }
@@ -122,7 +161,7 @@ function montarNumeros(posts) {
     const fragmento = document.createDocumentFragment();
 
     cartoes.forEach(({ rotulo, valor }) => {
-        const item = criarElemento('article', { classe: 'gs-metric-card gs-stack' });
+        const item = criarElemento('article', { classe: 'gs-metric-card profile-metric-card' });
         item.append(
             criarElemento('span', { classe: 'gs-metric-label', texto: rotulo }),
             criarElemento('strong', { texto: String(valor) })
@@ -161,8 +200,8 @@ async function carregarPagina() {
     estadoPublicacoes.carregando('Carregando publicações…');
 
     try {
-        const usuario = await buscarUsuario(usuarioDaUrl);
-        ehMeuPerfil = !usuarioDaUrl || usuarioDaUrl === usuario.username;
+        const [usuario, meuPerfil] = await Promise.all([buscarUsuario(usuarioDaUrl), buscarMeuPerfil()]);
+        ehMeuPerfil = usuario.id === meuPerfil.id;
 
         document.title = `${usuario.name} | GerminaStack`;
         montarCartao(usuario);

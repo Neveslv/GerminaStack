@@ -18,6 +18,11 @@ const estadoRespostas = criarPainelDeEstado(document.querySelector('#estado-resp
 
 const idPost = new URLSearchParams(window.location.search).get('id');
 
+function estaEscrevendoResposta() {
+    const campo = document.activeElement;
+    return (campo instanceof HTMLInputElement || campo instanceof HTMLTextAreaElement) && campo.value.trim() !== '';
+}
+
 function copiarTextoDoPost(post) {
     navigator.clipboard?.writeText(post.content);
     window.GerminaStackUI?.showToast({
@@ -46,6 +51,7 @@ function ligarMenuDaPublicacao(post) {
 }
 
 async function renderizarThread(comentarios) {
+    thread.replaceChildren();
     if (comentarios.length === 0) {
         estadoRespostas.vazio('Ninguém respondeu ainda', 'Seja o primeiro a responder esta dúvida.');
         return;
@@ -55,6 +61,16 @@ async function renderizarThread(comentarios) {
 
     estadoRespostas.ocultar();
     inicializarKit(thread);
+}
+
+async function atualizarThread(silencioso = false) {
+    try {
+        const comentarios = await listarComentarios(idPost);
+        if (silencioso && estaEscrevendoResposta()) return;
+        await renderizarThread(comentarios);
+    } catch (erro) {
+        if (!silencioso) estadoRespostas.erro(erro.message, 'Recarregue a página para tentar de novo.');
+    }
 }
 
 function ligarFormularioDeResposta() {
@@ -130,11 +146,10 @@ async function carregarPagina() {
         return;
     }
 
-    try {
-        await renderizarThread(await listarComentarios(idPost));
-    } catch (erro) {
-        estadoRespostas.erro(erro.message, 'Recarregue a página para tentar de novo.');
-    }
+    await atualizarThread();
 }
 
 carregarPagina();
+window.setInterval(() => {
+    if (!document.hidden && idPost && !estaEscrevendoResposta()) atualizarThread(true);
+}, 10000);

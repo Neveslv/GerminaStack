@@ -6,10 +6,55 @@ const feed = document.querySelector('#feed');
 const listaMaterias = document.querySelector('#lista-materias');
 const campoBusca = document.querySelector('#busca');
 const estado = criarPainelDeEstado(document.querySelector('#estado-feed'));
+const trending = document.querySelector('#trending-posts');
+const anteriorTrending = document.querySelector('[data-trending-anterior]');
+const proximoTrending = document.querySelector('[data-trending-proximo]');
 
 const filtros = { idSubject: null, termo: '' };
 
 let postsCarregados = [];
+let indiceTrending = 0;
+let temporizadorTrending;
+let navegarTrending = () => {};
+
+function renderizarTrending(posts) {
+    if (!trending || posts.length === 0) return;
+    const relevantes = [...posts].sort((a, b) => {
+        const pontos = (post) => post.likes + (post.comments_count * 2) - post.dislikes;
+        return pontos(b) - pontos(a) || new Date(b.created_at) - new Date(a.created_at);
+    }).slice(0, 5);
+    const faixa = criarElemento('div', { classe: 'trending-track' });
+    relevantes.forEach((post) => {
+        const cartao = criarCartaoDePost(post);
+        cartao.addEventListener('click', (evento) => {
+            if (!evento.target.closest('a, button')) window.location.assign(`/post?id=${post.id}`);
+        });
+        faixa.append(cartao);
+    });
+    trending.replaceChildren(faixa);
+    const mostrar = () => {
+        faixa.style.transform = `translateX(-${(indiceTrending % relevantes.length) * 100}%)`;
+    };
+    navegarTrending = (passo) => {
+        indiceTrending = (indiceTrending + passo + relevantes.length) % relevantes.length;
+        mostrar();
+    };
+    mostrar();
+    window.clearInterval(temporizadorTrending);
+    if (relevantes.length > 1) temporizadorTrending = window.setInterval(() => navegarTrending(1), 5000);
+    let inicioX;
+    trending.onpointerdown = (evento) => { inicioX = evento.clientX; };
+    trending.onpointerup = (evento) => {
+        if (inicioX === undefined) return;
+        const distancia = evento.clientX - inicioX;
+        if (Math.abs(distancia) > 40) navegarTrending(distancia < 0 ? 1 : -1);
+        inicioX = undefined;
+    };
+    inicializarKit(trending);
+}
+
+anteriorTrending?.addEventListener('click', () => navegarTrending(-1));
+proximoTrending?.addEventListener('click', () => navegarTrending(1));
 
 function aplicarBusca(posts) {
     const termo = filtros.termo.trim().toLowerCase();
@@ -48,13 +93,15 @@ async function renderizarFeed() {
     window.GerminaStackUI?.announceToScreenReader(`${visiveis.length} publicações listadas.`);
 }
 
-async function carregarPosts() {
-    estado.carregando('Carregando publicações…');
+async function carregarPosts(silencioso = false) {
+    if (!silencioso) estado.carregando('Carregando publicações…');
 
     try {
         postsCarregados = await listarPosts({ idSubject: filtros.idSubject });
+        if (!filtros.idSubject) renderizarTrending(postsCarregados);
         await renderizarFeed();
     } catch (erro) {
+        if (silencioso) return;
         feed.replaceChildren();
         estado.erro(erro.message, 'Recarregue a página para tentar de novo.');
     }
@@ -173,3 +220,6 @@ campoBusca.addEventListener(
 
 carregarMaterias();
 carregarPosts();
+window.setInterval(() => {
+    if (!document.hidden) carregarPosts(true);
+}, 10000);

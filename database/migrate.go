@@ -25,6 +25,12 @@ var usersAdminMigration string
 //go:embed migrations/0007_notify_mentions.sql
 var notifyMentionsMigration string
 
+//go:embed migrations/0008_frok_user.sql
+var frokUserMigration string
+
+//go:embed migrations/0009_admin_moderation.sql
+var adminModerationMigration string
+
 func Migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := db.ExecContext(ctx, coreSchemaMigration); err != nil {
 		return fmt.Errorf("apply core schema migration: %w", err)
@@ -43,6 +49,12 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 	if _, err := db.ExecContext(ctx, notifyMentionsMigration); err != nil {
 		return fmt.Errorf("apply notifications migration: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, frokUserMigration); err != nil {
+		return fmt.Errorf("apply Frok migration: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, adminModerationMigration); err != nil {
+		return fmt.Errorf("apply moderation migration: %w", err)
 	}
 	return nil
 }

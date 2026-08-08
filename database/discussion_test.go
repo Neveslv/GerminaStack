@@ -19,11 +19,11 @@ func TestPostgresDiscussionRepositoryListsPostsWithFiltersAndPagination(t *testi
 	subjectID, authorID := int64(3), int64(7)
 	created := time.Date(2026, 8, 5, 12, 0, 0, 0, time.UTC)
 	const query = `SELECT p.id, p.id_user, p.id_subject, p.title, p.image_url, p.image_description, p.content, p.likes, p.dislikes,
-	       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), u.name, u.username, p.created_at
+	       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), u.name, u.username, u.profile_image_url, u.profile_image_description, p.created_at
 FROM posts p JOIN users u ON u.id = p.id_user WHERE p.id_subject = $1 AND p.id_user = $2 ORDER BY p.created_at DESC, p.id DESC LIMIT $3 OFFSET $4`
 	mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(subjectID, authorID, 20, int64(20)).WillReturnRows(
-		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "comments_count", "author_name", "author_username", "created_at"}).
-			AddRow(int64(9), authorID, subjectID, "Title", nil, nil, "Content", int64(2), int64(1), int64(3), "Bruno Salles", "bruno.salles", created),
+		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "comments_count", "author_name", "author_username", "author_image_url", "author_image_description", "created_at"}).
+			AddRow(int64(9), authorID, subjectID, "Title", nil, nil, "Content", int64(2), int64(1), int64(3), "Bruno Salles", "bruno.salles", nil, nil, created),
 	)
 
 	posts, err := NewPostgresDiscussionRepository(db).ListPosts(context.Background(), PostFilter{SubjectID: &subjectID, AuthorID: &authorID, Pagination: Pagination{Page: 2, PageSize: 20}})
@@ -36,8 +36,8 @@ FROM posts p JOIN users u ON u.id = p.id_user WHERE p.id_subject = $1 AND p.id_u
 func TestPostgresDiscussionRepositoryReturnsEmptyReadLists(t *testing.T) {
 	t.Parallel()
 	db, mock := newCatalogMock(t)
-	mock.ExpectQuery("SELECT id, id_post, id_user, content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "content", "likes", "dislikes", "created_at"}))
-	mock.ExpectQuery("SELECT id, id_comment, id_user, content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_comment", "id_user", "content", "likes", "dislikes", "created_at"}))
+	mock.ExpectQuery("SELECT c.id, c.id_post, c.id_user, c.content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "content", "likes", "dislikes", "author_name", "author_username", "created_at"}))
+	mock.ExpectQuery("SELECT c.id, c.id_comment, c.id_user, c.content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_comment", "id_user", "content", "likes", "dislikes", "author_name", "author_username", "created_at"}))
 	mock.ExpectQuery("SELECT id, id_post, id_user, text_show").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "text_show", "is_read", "created_at"}))
 	repository := NewPostgresDiscussionRepository(db)
 	pagination := Pagination{Page: 1, PageSize: 20}
@@ -71,8 +71,8 @@ func TestPostgresDiscussionRepositoryCreatesMessagesThroughDatabaseFunction(t *t
 	const createQuery = `SELECT create_message($1, $2, $3, $4, $5, $6, $7)`
 	mock.ExpectQuery(regexp.QuoteMeta(createQuery)).WithArgs("post", int64(42), int64(3), "Body", "Title", nil, nil).WillReturnRows(sqlmock.NewRows([]string{"create_message"}).AddRow(int64(8)))
 	mock.ExpectQuery("SELECT p.id, p.id_user, p.id_subject, p.title").WithArgs(int64(8)).WillReturnRows(
-		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "comments_count", "author_name", "author_username", "created_at"}).
-			AddRow(int64(8), int64(42), int64(3), "Title", nil, nil, "Body", int64(0), int64(0), int64(0), "Ana", "ana", nil),
+		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "comments_count", "author_name", "author_username", "author_image_url", "author_image_description", "created_at"}).
+			AddRow(int64(8), int64(42), int64(3), "Title", nil, nil, "Body", int64(0), int64(0), int64(0), "Ana", "ana", nil, nil, nil),
 	)
 	post, err := NewPostgresDiscussionRepository(db).CreatePost(context.Background(), 42, PostInput{SubjectID: 3, Title: "Title", Content: "Body"})
 	if err != nil || post.ID != 8 || post.UserID != 42 {

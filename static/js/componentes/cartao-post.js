@@ -1,5 +1,5 @@
 import { criarElemento } from '../utils/dom.js';
-import { corDoAutor, tomDaMateria, inicialDoNome } from '../utils/identidade.js';
+import { aplicarImagemNoAvatar, corDoAutor, tomDaMateria, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
 
@@ -98,7 +98,7 @@ function montarCabecalho(post, destaque) {
         texto: inicialDoNome(post.author.name),
         atributos: { 'aria-hidden': 'true' }
     });
-    avatar.style.background = corDoAutor(post.author.id);
+    if (!aplicarImagemNoAvatar(avatar, post.author)) avatar.style.background = corDoAutor(post.author.id);
 
     const cabecalho = criarElemento('div', { classe: 'gs-post-head' });
     cabecalho.append(avatar, usuario, montarMenu(post));
@@ -154,7 +154,16 @@ export function criarCartaoDePost(post, { minhaReacao = null, destaque = false }
                 loading: 'lazy'
             }
         });
-        midia.append(imagem);
+        const ampliar = criarElemento('a', {
+            atributos: {
+                href: post.image_url,
+                target: '_blank',
+                rel: 'noopener',
+                'aria-label': 'Abrir imagem ou GIF em tamanho maior'
+            }
+        });
+        ampliar.append(imagem);
+        midia.append(ampliar);
         if (descricao) midia.append(criarElemento('figcaption', { texto: descricao }));
         corpo.append(midia);
     }

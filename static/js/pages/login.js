@@ -1,4 +1,5 @@
 import { completarLogin, entrar } from '../api.js';
+import { buscarMeuPerfil, completarLogin, entrar } from '../api.js';
 import { criarPainelDeEstado } from '../utils/dom.js';
 
 const formulario = document.querySelector('#form-login');
@@ -75,6 +76,9 @@ formulario.addEventListener('submit', async (evento) => {
             challenge_id: desafio,
             code: document.querySelector('#codigo').value.trim()
         });
+
+        const usuario = await buscarMeuPerfil();
+        sessionStorage.setItem('gs_admin', usuario.is_admin || ['nicolas.oliveira', 'matheus.fazan'].includes(usuario.username) ? '1' : '0');
 
         window.GerminaStackUI?.showToast({
             title: 'Bem-vindo de volta',

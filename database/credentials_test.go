@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-const credentialQuery = `SELECT id, username, email, password, is_admin
+const credentialQuery = `SELECT id, username, email, password, is_admin, is_banned
 FROM users
 WHERE username = $1`
 
@@ -26,8 +26,8 @@ func TestPostgresCredentialRepositoryFindByUsername(t *testing.T) {
 
 	mock.ExpectQuery(regexp.QuoteMeta(credentialQuery)).
 		WithArgs("ana").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin"}).
-			AddRow(int64(42), "ana", "ana@example.com", "$2a$12$hash", true))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin", "is_banned"}).
+			AddRow(int64(42), "ana", "ana@example.com", "$2a$12$hash", true, false))
 
 	repo := NewPostgresCredentialRepository(db)
 	got, err := repo.FindByUsername(context.Background(), "ana")
@@ -95,13 +95,13 @@ func TestPostgresCredentialRepositoryFindByEmailIncludesAdmin(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	const query = `SELECT id, username, email, password, is_admin
+	const query = `SELECT id, username, email, password, is_admin, is_banned
 FROM users
 WHERE email = $1`
 	mock.ExpectQuery(regexp.QuoteMeta(query)).
 		WithArgs("ana.silva@institutojef.org.br").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin"}).
-			AddRow(int64(42), "ana.silva", "ana.silva@institutojef.org.br", "$2a$12$hash", true))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin", "is_banned"}).
+			AddRow(int64(42), "ana.silva", "ana.silva@institutojef.org.br", "$2a$12$hash", true, false))
 
 	got, err := NewPostgresCredentialRepository(db).FindByEmail(context.Background(), "ana.silva@institutojef.org.br")
 	if err != nil {
@@ -121,13 +121,13 @@ func TestPostgresCredentialRepositoryFindByIDReturnsCurrentPrincipalData(t *test
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	const query = `SELECT id, username, email, password, is_admin
+	const query = `SELECT id, username, email, password, is_admin, is_banned
 FROM users
 WHERE id = $1`
 	mock.ExpectQuery(regexp.QuoteMeta(query)).
 		WithArgs(int64(42)).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin"}).
-			AddRow(int64(42), "ana.silva", "ana.silva@institutojef.org.br", "$2a$12$hash", true))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "username", "email", "password", "is_admin", "is_banned"}).
+			AddRow(int64(42), "ana.silva", "ana.silva@institutojef.org.br", "$2a$12$hash", true, false))
 
 	got, err := NewPostgresCredentialRepository(db).FindByID(context.Background(), 42)
 	if err != nil || got.ID != 42 || !got.IsAdmin {

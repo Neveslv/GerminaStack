@@ -1,154 +1,32 @@
-import { cadastrar, listarAnos } from '../api.js';
+import { buscarMeuPerfil, excluirPost, listarPostsAdmin, listarUsuariosAdmin, banirUsuario, definirAdmin } from '../api.js';
 import { criarElemento, criarPainelDeEstado } from '../utils/dom.js';
 
-const formulario = document.querySelector('#form-admin');
-const seletorAno = document.querySelector('#ano');
+const usuarios = document.querySelector('#usuarios-admin');
+const posts = document.querySelector('#posts-admin');
 const estado = criarPainelDeEstado(document.querySelector('#estado-admin'));
+const superAdmins = new Set(['nicolas.oliveira', 'matheus.fazan']);
+const paginas = { usuarios: 1, posts: 1 };
 
-const PADRAO_USUARIO = /^[a-zA-Z0-9_]+$/;
-
-const REGRAS = [
-    {
-        campo: 'nome',
-        erro: 'erro-nome',
-        validar: (valor) => (valor ? '' : 'Informe o nome completo.')
-    },
-    {
-        campo: 'usuario',
-        erro: 'erro-usuario',
-        validar: (valor) => {
-            if (!valor) return 'Escolha um nome de usuário.';
-            if (valor.length < 3) return 'O usuário precisa ter pelo menos 3 caracteres.';
-            if (!PADRAO_USUARIO.test(valor)) {
-                return 'Use só letras sem acento, números e traço baixo (_).';
-            }
-            return '';
-        }
-    },
-    {
-        campo: 'email',
-        erro: 'erro-email',
-        validar: (valor) => {
-            if (!valor) return 'Informe o e-mail.';
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(valor)) return 'Esse e-mail não parece válido.';
-            return '';
-        }
-    },
-    {
-        campo: 'ano',
-        erro: 'erro-ano',
-        validar: (valor) => (valor ? '' : 'Selecione a turma.')
-    },
-    {
-        campo: 'senha',
-        erro: 'erro-senha',
-        validar: (valor) => {
-            if (!valor) return 'Crie uma senha provisória.';
-            if (valor.length < 8) return 'A senha precisa ter pelo menos 8 caracteres.';
-            return '';
-        }
-    },
-    {
-        campo: 'confirmar-senha',
-        erro: 'erro-confirmar-senha',
-        validar: (valor) => {
-            if (!valor) return 'Repita a senha.';
-            if (valor !== document.querySelector('#senha').value) return 'As senhas não são iguais.';
-            return '';
-        }
-    }
-];
-
-function limparErros() {
-    REGRAS.forEach(({ campo, erro }) => {
-        document.querySelector(`#${erro}`).textContent = '';
-        document.querySelector(`#${campo}`).setAttribute('aria-invalid', 'false');
+function botao(texto, acao) { const item = criarElemento('button', { classe: 'gs-btn gs-btn-ghost', texto, atributos: { type: 'button' } }); item.addEventListener('click', acao); return item; }
+function paginacao(alvo, tipo, total) {
+    alvo.replaceChildren(); const atual = paginas[tipo]; const temAnterior = atual > 1; const temProxima = atual * 5 < total;
+    if (temAnterior) alvo.append(botao('Anterior', () => { paginas[tipo]--; carregar(); }));
+    alvo.append(criarElemento('span', { classe: 'gs-form-hint', texto: `Página ${atual} de ${Math.max(1, Math.ceil(total / 5))}` }));
+    if (temProxima) alvo.append(botao('Próxima', () => { paginas[tipo]++; carregar(); }));
+}
+function renderizarUsuarios(lista, eu) {
+    usuarios.replaceChildren(); lista.forEach((usuario) => {
+        const linha = criarElemento('article', { classe: 'gs-list-row admin-user' }); const info = criarElemento('div');
+        info.append(criarElemento('strong', { texto: usuario.name }), criarElemento('p', { classe: 'gs-form-hint', texto: `@${usuario.username}${usuario.is_banned ? ' · Banido' : usuario.is_admin ? ' · Admin' : ''}` })); linha.append(info);
+        const acoes = criarElemento('div', { classe: 'gs-cluster' }); const protegido = usuario.id === eu.id || superAdmins.has(usuario.username) || (!superAdmins.has(eu.username) && usuario.is_admin);
+        if (!protegido) acoes.append(botao(usuario.is_banned ? 'Desbanir' : 'Banir', async () => { await banirUsuario(usuario.id, !usuario.is_banned); carregar(); }));
+        if (superAdmins.has(eu.username) && !superAdmins.has(usuario.username) && usuario.id !== eu.id) acoes.append(botao(usuario.is_admin ? 'Remover admin' : 'Tornar admin', async () => { await definirAdmin(usuario.id, !usuario.is_admin); carregar(); }));
+        linha.append(acoes); usuarios.append(linha);
     });
 }
-
-function validar() {
-    let primeiroInvalido = null;
-
-    REGRAS.forEach(({ campo, erro, validar: checar }) => {
-        const elemento = document.querySelector(`#${campo}`);
-
-        const valor = campo.includes('senha') ? elemento.value : elemento.value.trim();
-        const mensagem = checar(valor);
-        if (!mensagem) return;
-
-        document.querySelector(`#${erro}`).textContent = mensagem;
-        elemento.setAttribute('aria-invalid', 'true');
-        if (!primeiroInvalido) primeiroInvalido = elemento;
-    });
-
-    return primeiroInvalido;
+function renderizarPosts(lista) { posts.replaceChildren(); lista.forEach((post) => { const linha = criarElemento('article', { classe: 'gs-list-row admin-post' }); const info = criarElemento('div'); info.append(criarElemento('strong', { texto: post.title }), criarElemento('p', { classe: 'gs-form-hint', texto: `Por ${post.author_name} (@${post.author_username})` })); linha.append(info, botao('Excluir', async () => { await excluirPost(post.id); carregar(); })); posts.append(linha); }); }
+async function carregar() {
+    try { estado.carregando('Carregando administração…'); const [eu, listaUsuarios, listaPosts] = await Promise.all([buscarMeuPerfil(), listarUsuariosAdmin({ page: paginas.usuarios, q: document.querySelector('#busca-usuarios').value.trim() }), listarPostsAdmin({ page: paginas.posts, q: document.querySelector('#busca-posts').value.trim() })]); renderizarUsuarios(listaUsuarios.items, eu); renderizarPosts(listaPosts.items); paginacao(document.querySelector('#paginacao-usuarios'), 'usuarios', listaUsuarios.total); paginacao(document.querySelector('#paginacao-posts'), 'posts', listaPosts.total); estado.ocultar(); } catch (erro) { estado.erro('Não foi possível carregar a administração.', erro.message); }
 }
-
-async function carregarAnos() {
-    try {
-        const anos = await listarAnos();
-        const fragmento = document.createDocumentFragment();
-
-        anos.forEach((ano) => {
-            fragmento.append(
-                criarElemento('option', { texto: ano.year, atributos: { value: String(ano.id) } })
-            );
-        });
-
-        seletorAno.append(fragmento);
-    } catch {
-        estado.erro('Não foi possível carregar as turmas', 'Recarregue a página para tentar de novo.');
-    }
-}
-
-formulario.addEventListener('submit', async (evento) => {
-    evento.preventDefault();
-    limparErros();
-
-    const invalido = validar();
-    if (invalido) {
-        estado.erro('Revise os campos destacados', 'Os campos com erro estão marcados abaixo.');
-        invalido.focus();
-        return;
-    }
-
-    const botao = formulario.querySelector('button[type="submit"]');
-    botao.disabled = true;
-    estado.carregando('Criando perfil…');
-
-    try {
-        const nome = document.querySelector('#nome').value.trim();
-
-        await cadastrar({
-            name: nome,
-            username: document.querySelector('#usuario').value.trim(),
-            email: document.querySelector('#email').value.trim(),
-            id_year: Number(seletorAno.value),
-            password: document.querySelector('#senha').value
-        });
-
-        window.GerminaStackUI?.showToast({
-            title: 'Perfil criado',
-            message: `A conta de ${nome} foi criada.`,
-            tone: 'success'
-        });
-
-        formulario.reset();
-        estado.ocultar();
-        document.querySelector('#nome').focus();
-    } catch (erro) {
-        estado.erro(erro.message, 'Confira os dados e tente de novo.');
-
-        if (erro.status === 409) {
-            const usuario = document.querySelector('#usuario');
-            document.querySelector('#erro-usuario').textContent =
-                'Esse usuário ou e-mail já está em uso.';
-            usuario.setAttribute('aria-invalid', 'true');
-            usuario.focus();
-        }
-    } finally {
-        botao.disabled = false;
-    }
-});
-
-carregarAnos();
+['usuarios', 'posts'].forEach((tipo) => document.querySelector(`#busca-${tipo}`).addEventListener('input', () => { paginas[tipo] = 1; carregar(); }));
+carregar();

@@ -14,6 +14,7 @@ import (
 	"germinaStack/auth"
 	"germinaStack/config"
 	"germinaStack/database"
+	"germinaStack/frok"
 	"germinaStack/handlers"
 	"germinaStack/routes"
 )
@@ -60,22 +61,53 @@ func run() error {
 		return fmt.Errorf("database migration failed: %w", err)
 	}
 
-	mailer, err := auth.NewSMTPMailer(cfg.SMTP)
+	var mailer auth.MailSender
+	mailer, err = auth.NewSMTPMailer(cfg.SMTP)
 	if err != nil {
 		return errors.New("SMTP initialization failed")
+	}
+	if cfg.GoogleClientID != "" && cfg.GoogleClientSecret != "" && cfg.GoogleRefreshToken != "" {
+		mailer, err = auth.NewGmailMailer(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRefreshToken, cfg.SMTP.FromAddress)
+		if err != nil {
+			return errors.New("Gmail initialization failed")
+		}
 	}
 	credentials := database.NewPostgresCredentialRepository(db)
 	challenges := database.NewPostgresChallengeRepository(db)
 	catalog := database.NewPostgresCatalogRepository(db)
 	discussion := database.NewPostgresDiscussionRepository(db)
 	account := database.NewPostgresAccountRepository(db)
+	admin := database.NewPostgresAdminRepository(db)
+	var frokService *frok.Service
+	if cfg.Frok.APIKey != "" {
+		memory := frok.MemoryStore(frok.NoopMemoryStore{})
+		if cfg.Frok.MemoryMongoURI != "" {
+			memoryContext, cancelMemory := context.WithTimeout(rootContext, cfg.Frok.Timeout)
+			mongoMemory, err := frok.NewMongoMemoryStore(memoryContext, cfg.Frok.MemoryMongoURI, cfg.Frok.MemoryDatabase)
+			cancelMemory()
+			if err != nil {
+				log.Print("Frok memory disabled: MongoDB is unavailable")
+			} else {
+				memory = mongoMemory
+				defer mongoMemory.Close()
+			}
+		}
+		frokService = frok.NewService(
+			database.NewPostgresFrokRepository(db),
+			frok.NewClient(cfg.Frok.APIKey, cfg.Frok.Model, cfg.Frok.Timeout),
+			cfg.Frok.Timeout,
+			func(err error) { log.Printf("Frok failed: %v", err) },
+			memory,
+		)
+	}
 	authService := auth.NewService(credentials, challenges, mailer, []byte(cfg.TwoFactorSecret), systemClock{})
 	authHandler := handlers.NewAuthHandler(authService, cfg.JWTSecret, cfg.CookieSecure, tokenTTL, cfg.AuthOperationTimeout)
 	userHandler := handlers.NewUserHandler(credentials, cfg.AuthOperationTimeout)
 	catalogHandler := handlers.NewCatalogHandler(catalog, cfg.AuthOperationTimeout)
-	discussionHandler := handlers.NewDiscussionHandler(discussion, cfg.AuthOperationTimeout)
+	discussionHandler := handlers.NewDiscussionHandler(discussion, cfg.AuthOperationTimeout, frokService)
 	accountHandler := handlers.NewAccountHandler(account, cfg.AuthOperationTimeout)
-	router := routes.NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, accountHandler, cfg.JWTSecret)
+	adminHandler := handlers.NewAdminHandler(admin, cfg.AuthOperationTimeout)
+	router := routes.NewRouter(authHandler, userHandler, catalogHandler, discussionHandler, accountHandler, cfg.JWTSecret, adminHandler)
 
 	server := newHTTPServer(cfg.HTTPAddr, router, cfg.AuthOperationTimeout)
 	serverErrors := make(chan error, 1)

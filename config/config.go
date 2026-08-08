@@ -21,9 +21,24 @@ type Config struct {
 	HTTPAddr             string
 	AuthOperationTimeout time.Duration
 	SMTP                 auth.SMTPConfig
+	Frok                 FrokConfig
+	GoogleClientID       string
+	GoogleClientSecret   string
+	GoogleRefreshToken   string
+}
+
+type FrokConfig struct {
+	APIKey         string
+	Model          string
+	Timeout        time.Duration
+	MemoryMongoURI string
+	MemoryDatabase string
 }
 
 func Load() (Config, error) {
+	if err := loadDotEnv(); err != nil {
+		return Config{}, err
+	}
 	databaseURL, err := required("DATABASE_URL")
 	if err != nil {
 		return Config{}, err
@@ -88,6 +103,18 @@ func Load() (Config, error) {
 		}
 		authOperationTimeout = parsed
 	}
+	frokTimeout := 30 * time.Second
+	if value := strings.TrimSpace(os.Getenv("FROK_TIMEOUT")); value != "" {
+		parsed, err := time.ParseDuration(value)
+		if err != nil || parsed <= 0 {
+			return Config{}, errors.New("FROK_TIMEOUT is invalid")
+		}
+		frokTimeout = parsed
+	}
+	frokModel := strings.TrimSpace(os.Getenv("FROK_MODEL"))
+	if frokModel == "" {
+		frokModel = "openai/gpt-oss-20b"
+	}
 
 	smtpConfig := auth.SMTPConfig{
 		Host:        smtpHost,
@@ -110,7 +137,44 @@ func Load() (Config, error) {
 		HTTPAddr:             httpAddr,
 		AuthOperationTimeout: authOperationTimeout,
 		SMTP:                 smtpConfig,
+		Frok: FrokConfig{
+			APIKey:         strings.TrimSpace(os.Getenv("GROQ_API_KEY")),
+			Model:          frokModel,
+			Timeout:        frokTimeout,
+			MemoryMongoURI: strings.TrimSpace(os.Getenv("FROK_MONGODB_URI")),
+			MemoryDatabase: valueOrDefault("FROK_MONGODB_DATABASE", "germinastack"),
+		},
+		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		GoogleRefreshToken: strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
 	}, nil
+}
+
+func loadDotEnv() error {
+	content, err := os.ReadFile(".env")
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read .env: %w", err)
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		key, value, ok := strings.Cut(strings.TrimSpace(line), "=")
+		if !ok || key == "" || strings.HasPrefix(key, "#") {
+			continue
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			_ = os.Setenv(key, strings.Trim(strings.TrimSpace(value), "\"'"))
+		}
+	}
+	return nil
+}
+
+func valueOrDefault(name, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(name)); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func validateAuthenticationSecrets(jwtSecret, twoFactorSecret string) error {

@@ -15,6 +15,7 @@ type User struct {
 	Email                   string     `db:"email" json:"email"`
 	Password                string     `db:"password" json:"-"`
 	IsAdmin                 bool       `db:"is_admin" json:"is_admin"`
+	IsBanned                bool       `db:"is_banned" json:"is_banned"`
 	CreatedAt               *time.Time `db:"created_at" json:"created_at"`
 }
 

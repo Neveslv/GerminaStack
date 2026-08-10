@@ -1,4 +1,3 @@
-import { completarLogin, entrar } from '../api.js';
 import { buscarMeuPerfil, completarLogin, entrar } from '../api.js';
 import { criarPainelDeEstado } from '../utils/dom.js';
 

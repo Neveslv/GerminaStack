@@ -1,15 +1,5 @@
-/**
- * Preferências de acessibilidade do usuário.
- *
- * Os valores são exatamente os aceitos pelos CHECK da tabela `preferences`.
- * Se um valor novo entrar no banco, ele entra aqui e no CSS que trata os
- * atributos data-tema/data-fonte — hoje static/vendor/germinastack/themes.css,
- * publicado pela lib (ver static/README.md).
- */
-
 const CHAVE = 'germinastack:preferencias';
 
-/** contrast_theme — mesmo domínio do CHECK da tabela `preferences`. */
 export const TEMAS = [
     { valor: 'normal', rotulo: 'Padrão', descricao: 'Fundo claro com o azul e o laranja da identidade.' },
     { valor: 'dark', rotulo: 'Escuro', descricao: 'Fundo escuro, útil à noite e para quem tem fotofobia.' },
@@ -18,7 +8,6 @@ export const TEMAS = [
     { valor: 'yellow_black', rotulo: 'Amarelo e preto', descricao: 'Fundo amarelo com texto preto, contraste máximo.' }
 ];
 
-/** font_family — mesmo domínio do CHECK da tabela `preferences`. */
 export const FONTES = [
     { valor: 'normal', rotulo: 'Padrão do sistema', descricao: 'A fonte que o kit já usa.' },
     { valor: 'arial', rotulo: 'Arial', descricao: 'Sem serifa, presente em qualquer computador.' },
@@ -28,14 +17,12 @@ export const FONTES = [
     { valor: 'open_dyslexic', rotulo: 'OpenDyslexic', descricao: 'Base pesada nas letras, pensada para dislexia.' }
 ];
 
-/** font_spacing — mesmo domínio do CHECK da tabela `preferences`. */
 export const ESPACAMENTOS = [
     { valor: 'normal', rotulo: 'Padrão', descricao: 'O espaçamento que a fonte já usa.' },
     { valor: 'pequeno', rotulo: 'Pequeno', descricao: 'Letras um pouco mais próximas.' },
     { valor: 'grande', rotulo: 'Grande', descricao: 'Letras e palavras mais separadas, para ler com menos esforço.' }
 ];
 
-/** font_size — mesmo domínio do CHECK da tabela `preferences`. */
 export const TAMANHOS = [
     { valor: 'normal', rotulo: 'Padrão', descricao: 'O tamanho que o kit já usa.' },
     { valor: 'pequeno', rotulo: 'Pequeno', descricao: 'Cabe mais conteúdo na tela.' },
@@ -71,7 +58,6 @@ function normalizar(preferencias = {}) {
     };
 }
 
-/** Lê o espelho local. O valor oficial vem da API. */
 export function lerPreferenciasLocais() {
     try {
         return normalizar(JSON.parse(window.localStorage.getItem(CHAVE)) || {});
@@ -80,16 +66,10 @@ export function lerPreferenciasLocais() {
     }
 }
 
-/** Guarda o espelho local usado pelo tema-inicial.js no próximo carregamento. */
 export function guardarPreferenciasLocais(preferencias) {
     window.localStorage.setItem(CHAVE, JSON.stringify(normalizar(preferencias)));
 }
 
-/**
- * Aplica o tema e a fonte no <html>.
- * O tema `normal` remove o atributo em vez de escrever "normal", para o CSS
- * do kit continuar valendo sem nenhuma regra nossa por cima.
- */
 export function aplicarPreferencias(preferencias) {
     const { contrast_theme, font_family, font_spacing, font_size } = normalizar(preferencias);
     const raiz = document.documentElement;

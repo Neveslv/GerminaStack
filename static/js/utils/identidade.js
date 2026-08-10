@@ -1,14 +1,3 @@
-/**
- * Cor e inicial de avatar, e tom do chip de matéria.
- *
- * A escolha é derivada do id, nunca sorteada: o mesmo usuário precisa ter
- * sempre a mesma cor, no feed e na página da publicação, senão quem reconhece
- * a pessoa pela cor se perde a cada tela.
- *
- * A cor é só reforço visual — nunca é o único jeito de identificar alguém,
- * porque o nome está sempre escrito ao lado (WCAG 1.4.1, uso de cor).
- */
-
 const CORES_DE_AVATAR = ['#ffb347', '#4db8ff', '#5fd6a4', '#c9a0ff'];
 const TONS_DE_CHIP = ['is-blue', 'is-amber', 'is-mint', 'is-rose'];
 const FOTO_DO_FROK = '/static/images/frok-profile.jpeg';

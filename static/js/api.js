@@ -1,26 +1,5 @@
-/**
- * Camada única de acesso à API.
- * Nenhum outro arquivo do projeto chama fetch diretamente.
- */
+import { API_BASE_URL, ROTA_LOGIN, TIMEOUT_MS } from './config.js';
 
-import {
-    API_BASE_URL,
-    ROTA_LOGIN,
-    TIMEOUT_MS,
-    USAR_DADOS_LOCAIS
-} from './config.js';
-
-import { POSTS_LOCAIS } from './mock/posts.js';
-import { MATERIAS_LOCAIS } from './mock/subjects.js';
-import { COMENTARIOS_LOCAIS } from './mock/comments.js';
-import { USUARIO_ATUAL } from './mock/sessao.js';
-import { ANOS_LOCAIS } from './mock/years.js';
-import { USUARIOS_LOCAIS } from './mock/users.js';
-import { NOTIFICACOES_LOCAIS } from './mock/notifications.js';
-import { PREFERENCIAS_LOCAIS, gravarPreferenciasLocais } from './mock/preferences.js';
-import { reacaoAtual, alternarReacao } from './mock/reactions.js';
-
-/** Erro de rede ou de resposta da API, carregando o status HTTP quando existir. */
 export class ErroDeApi extends Error {
     constructor(mensagem, status = 0) {
         super(mensagem);
@@ -42,11 +21,6 @@ async function lerMensagemDeErro(resposta) {
     }
 }
 
-/**
- * Executa uma requisição à API e devolve o corpo já convertido de JSON.
- * @param {string} caminho rota iniciada por barra, ex.: '/api/posts'
- * @param {RequestInit} opcoes opções adicionais do fetch
- */
 async function requisitar(caminho, opcoes = {}) {
     const controlador = new AbortController();
     const relogio = setTimeout(() => controlador.abort(), TIMEOUT_MS);
@@ -80,16 +54,7 @@ async function requisitar(caminho, opcoes = {}) {
     }
 }
 
-/**
- * Devolve a lista de publicações do feed.
- * @param {{ idSubject?: number }} filtros filtro opcional por matéria
- */
 export async function listarPosts({ idSubject } = {}) {
-    if (USAR_DADOS_LOCAIS) {
-        if (!idSubject) return POSTS_LOCAIS;
-        return POSTS_LOCAIS.filter((post) => post.subject.id === idSubject);
-    }
-
     const query = idSubject ? `?subject_id=${idSubject}` : '';
     const [posts, materias, usuario] = await Promise.all([
         requisitar(`/api/posts${query}`),
@@ -99,19 +64,11 @@ export async function listarPosts({ idSubject } = {}) {
     return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
 }
 
-/** Devolve a lista de matérias disponíveis para filtro. */
 export async function listarMaterias() {
-    if (USAR_DADOS_LOCAIS) return MATERIAS_LOCAIS;
     return requisitar('/api/subjects');
 }
 
-/** Devolve uma publicação pelo identificador. */
 export async function buscarPost(id) {
-    if (USAR_DADOS_LOCAIS) {
-        const post = POSTS_LOCAIS.find((item) => item.id === Number(id));
-        if (!post) throw new ErroDeApi('Publicação não encontrada.', 404);
-        return post;
-    }
     const [post, materias, usuario] = await Promise.all([
         requisitar(`/api/posts/${id}`),
         listarMaterias(),
@@ -120,28 +77,7 @@ export async function buscarPost(id) {
     return normalizarPost(post, materias, usuario);
 }
 
-/** Cria uma publicação e devolve o registro salvo. */
 export async function criarPost(dados) {
-    if (USAR_DADOS_LOCAIS) {
-        const materia = MATERIAS_LOCAIS.find((item) => item.id === dados.id_subject);
-
-        const novoPost = {
-            id: Math.max(...POSTS_LOCAIS.map((post) => post.id)) + 1,
-            title: dados.title,
-            content: dados.content,
-            image_url: dados.image_url ?? null,
-            likes: 0,
-            dislikes: 0,
-            created_at: new Date().toISOString(),
-            author: USUARIO_ATUAL,
-            subject: materia ?? { id: dados.id_subject, subject: 'Matéria' },
-            comments_count: 0
-        };
-
-        POSTS_LOCAIS.unshift(novoPost);
-        return novoPost;
-    }
-
     const post = await requisitar('/api/posts', {
         method: 'POST',
         body: JSON.stringify(dados)
@@ -149,9 +85,7 @@ export async function criarPost(dados) {
     return normalizarPost(post, await listarMaterias(), await buscarMeuPerfil());
 }
 
-/** Devolve os comentários de uma publicação, já com as respostas aninhadas. */
 export async function listarComentarios(idPost) {
-    if (USAR_DADOS_LOCAIS) return COMENTARIOS_LOCAIS[Number(idPost)] ?? [];
     const [comentarios, usuario] = await Promise.all([
         requisitar(`/api/posts/${idPost}/comments`),
         buscarMeuPerfil()
@@ -163,45 +97,14 @@ export async function listarComentarios(idPost) {
     })));
 }
 
-/** Autentica o usuário. O token volta em cookie definido pelo servidor. */
 export async function entrar(credenciais) {
-    if (USAR_DADOS_LOCAIS) {
-        if (!credenciais.username || !credenciais.password) {
-            throw new ErroDeApi('Informe usuário e senha.', 400);
-        }
-        return { ...USUARIO_ATUAL, username: credenciais.username };
-    }
-
     return requisitar('/api/login', {
         method: 'POST',
         body: JSON.stringify(credenciais)
     });
 }
 
-/** Cria uma conta. Espelha as colunas obrigatórias da tabela `users`. */
 export async function cadastrar(dados) {
-    if (USAR_DADOS_LOCAIS) {
-        const jaExiste = USUARIOS_LOCAIS.some(
-            (usuario) => usuario.username === dados.username || usuario.email === dados.email
-        );
-
-        // As colunas username e email são UNIQUE: o back devolve 409 nesse caso.
-        if (jaExiste) throw new ErroDeApi('Já existe uma conta com esse usuário ou e-mail.', 409);
-
-        const ano = ANOS_LOCAIS.find((item) => item.id === dados.id_year);
-        const novoUsuario = {
-            id: Math.max(...USUARIOS_LOCAIS.map((usuario) => usuario.id)) + 1,
-            name: dados.name,
-            username: dados.username,
-            email: dados.email,
-            year: ano ?? { id: dados.id_year, year: 'Turma' },
-            created_at: new Date().toISOString()
-        };
-
-        USUARIOS_LOCAIS.push(novoUsuario);
-        return novoUsuario;
-    }
-
     return requisitar('/api/users', {
         method: 'POST',
         body: JSON.stringify({
@@ -213,19 +116,11 @@ export async function cadastrar(dados) {
     });
 }
 
-/** Devolve os anos/turmas cadastrados, usados no cadastro e no perfil. */
 export async function listarAnos() {
-    if (USAR_DADOS_LOCAIS) return ANOS_LOCAIS;
     return requisitar('/api/years');
 }
 
-/** Devolve o perfil público de um usuário pelo username. */
 export async function buscarUsuario(username) {
-    if (USAR_DADOS_LOCAIS) {
-        const usuario = USUARIOS_LOCAIS.find((item) => item.username === username);
-        if (!usuario) throw new ErroDeApi('Usuário não encontrado.', 404);
-        return usuario;
-    }
     const [meuPerfil, anos] = await Promise.all([buscarMeuPerfil(), listarAnos()]);
     const usuario = !username || username === meuPerfil.username
         ? meuPerfil
@@ -233,7 +128,6 @@ export async function buscarUsuario(username) {
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
-/** Salva os dados editáveis do perfil do usuário logado. */
 export async function salvarPerfil(dados) {
     return requisitar('/api/me', {
         method: 'PATCH',
@@ -247,11 +141,7 @@ export async function banirUsuario(id, enabled = true) { return requisitar(`/api
 export async function definirAdmin(id, enabled) { return requisitar(`/api/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
 export async function excluirPost(id) { return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); }
 
-/** Devolve as publicações escritas por um usuário. */
 export async function listarPostsDoAutor(idAutor) {
-    if (USAR_DADOS_LOCAIS) {
-        return POSTS_LOCAIS.filter((post) => post.author.id === Number(idAutor));
-    }
     const [posts, materias, usuario] = await Promise.all([
         requisitar(`/api/posts?author_id=${idAutor}`),
         listarMaterias(),
@@ -260,48 +150,16 @@ export async function listarPostsDoAutor(idAutor) {
     return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
 }
 
-/**
- * Devolve as notificações do usuário logado.
- * O `text_show` já vem montado pelo trigger `notify_mentions`.
- */
+
 export async function listarNotificacoes() {
-    if (USAR_DADOS_LOCAIS) return NOTIFICACOES_LOCAIS;
     return requisitar('/api/notifications');
 }
 
-/** Marca todas as notificações como lidas — equivale a mark_notifications_as_read(). */
 export async function marcarNotificacoesComoLidas() {
-    if (USAR_DADOS_LOCAIS) {
-        NOTIFICACOES_LOCAIS.forEach((notificacao) => {
-            notificacao.is_read = true;
-        });
-        return null;
-    }
-
     return requisitar('/api/notifications/read-all', { method: 'PATCH' });
 }
 
-/**
- * Registra ou desfaz uma reação, espelhando a função `reaction()` do banco.
- *
- * @param {{ tipo: 'post'|'comment'|'comment_on_comment', id: number, reacao: 'like'|'dislike' }} alvo
- * @returns {Promise<{ reacao: string|null, likes: number, dislikes: number }>} deltas dos contadores
- */
 export async function reagir({ tipo, id, reacao }) {
-    if (USAR_DADOS_LOCAIS) {
-        const deltas = alternarReacao(tipo, id, reacao);
-
-        if (tipo === 'post') {
-            const post = POSTS_LOCAIS.find((item) => item.id === Number(id));
-            if (post) {
-                post.likes = Math.max(0, post.likes + deltas.likes);
-                post.dislikes = Math.max(0, post.dislikes + deltas.dislikes);
-            }
-        }
-
-        return deltas;
-    }
-
     const recurso = { post: 'posts', comment: 'comments', comment_on_comment: 'replies' }[tipo];
     const chave = `${tipo}:${id}`;
     const anterior = reacoesDaSessao.get(chave) ?? null;
@@ -319,53 +177,11 @@ export async function reagir({ tipo, id, reacao }) {
     };
 }
 
-/** Devolve a reação do usuário logado para um alvo, ou null. */
 export async function buscarMinhaReacao(tipo, id) {
-    if (USAR_DADOS_LOCAIS) return reacaoAtual(tipo, id);
     return reacoesDaSessao.get(`${tipo}:${id}`) ?? null;
 }
 
-/**
- * Cria um comentário ou uma resposta, espelhando `create_message()`.
- *
- * @param {{ tipo: 'comment'|'comment_on_comment', idPai: number, content: string }} dados
- *        idPai é o post quando tipo='comment' e o comentário quando é resposta.
- */
 export async function criarComentario({ tipo, idPai, content }) {
-    if (USAR_DADOS_LOCAIS) {
-        const novo = {
-            id: Math.floor(Math.random() * 100000) + 1000,
-            content,
-            likes: 0,
-            dislikes: 0,
-            created_at: new Date().toISOString(),
-            author: USUARIO_ATUAL
-        };
-
-        if (tipo === 'comment') {
-            const idPost = Number(idPai);
-            novo.replies = [];
-            COMENTARIOS_LOCAIS[idPost] = COMENTARIOS_LOCAIS[idPost] ?? [];
-            COMENTARIOS_LOCAIS[idPost].push(novo);
-
-            const post = POSTS_LOCAIS.find((item) => item.id === idPost);
-            if (post) post.comments_count += 1;
-
-            return novo;
-        }
-
-        for (const comentarios of Object.values(COMENTARIOS_LOCAIS)) {
-            const pai = comentarios.find((item) => item.id === Number(idPai));
-            if (pai) {
-                pai.replies = pai.replies ?? [];
-                pai.replies.push(novo);
-                return novo;
-            }
-        }
-
-        throw new ErroDeApi('Comentário pai não encontrado.', 404);
-    }
-
     const rota = tipo === 'comment'
         ? `/api/posts/${idPai}/comments`
         : `/api/comments/${idPai}/replies`;
@@ -374,16 +190,11 @@ export async function criarComentario({ tipo, idPai, content }) {
     return normalizarMensagem(comentario, await buscarMeuPerfil());
 }
 
-/** Devolve as preferências de acessibilidade do usuário logado. */
 export async function buscarPreferencias() {
-    if (USAR_DADOS_LOCAIS) return PREFERENCIAS_LOCAIS;
     return requisitar('/api/me/preferences');
 }
 
-/** Salva as preferências de acessibilidade do usuário logado. */
 export async function salvarPreferencias(preferencias) {
-    if (USAR_DADOS_LOCAIS) return gravarPreferenciasLocais(preferencias);
-
     return requisitar('/api/me/preferences', {
         method: 'PATCH',
         body: JSON.stringify(preferencias)
@@ -433,7 +244,6 @@ async function normalizarPost(post, materias, usuario) {
 }
 
 export async function completarLogin(dados) {
-    if (USAR_DADOS_LOCAIS) return null;
     return requisitar('/api/login/2fa', {
         method: 'POST',
         body: JSON.stringify(dados)
@@ -441,6 +251,5 @@ export async function completarLogin(dados) {
 }
 
 export async function sair() {
-    if (USAR_DADOS_LOCAIS) return null;
     return requisitar('/api/logout', { method: 'POST' });
 }

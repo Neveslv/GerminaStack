@@ -1,5 +1,3 @@
-/** Página de login: valida credenciais e envia à API. */
-
 import { buscarMeuPerfil, completarLogin, entrar } from '../api.js';
 import { criarPainelDeEstado } from '../utils/dom.js';
 

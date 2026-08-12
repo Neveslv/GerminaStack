@@ -2,6 +2,7 @@ import { criarElemento } from '../utils/dom.js';
 import { aplicarImagemNoAvatar, corDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
+import { ativarAutocompleteDeMencoes, montarTextoComMencoesEGifs } from './mencoes.js';
 import { criarComentario as enviarComentario, buscarMinhaReacao } from '../api.js';
 
 function criarAvatar(autor) {
@@ -28,12 +29,7 @@ function criarBolha(item, classeBolha) {
     );
 
     const texto = criarElemento('p');
-    const partes = item.content.split(/(https?:\/\/\S+\.gif(?:\?\S*)?)/gi);
-    partes.forEach((parte) => {
-        if (/^https?:\/\/\S+\.gif(?:\?\S*)?$/i.test(parte)) {
-            texto.append(criarElemento('img', { atributos: { src: parte, alt: 'GIF enviado na resposta', loading: 'lazy' } }));
-        } else texto.append(document.createTextNode(parte));
-    });
+    texto.append(montarTextoComMencoesEGifs(item.content));
     const bolha = criarElemento('div', { classe: classeBolha });
     bolha.append(meta, texto);
     return bolha;
@@ -99,6 +95,7 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
     });
 
     formulario.append(rotulo, campo, enviar);
+    ativarAutocompleteDeMencoes(campo);
 
     formulario.addEventListener('submit', async (evento) => {
         evento.preventDefault();

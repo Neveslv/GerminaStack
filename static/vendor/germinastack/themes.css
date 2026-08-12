@@ -764,3 +764,42 @@ body {
 [data-tamanho="grande"] body {
     zoom: 1.15;
 }
+
+.gs-form-group { position: relative; }
+
+.gs-mention {
+    padding: 0 2px;
+    border-radius: 3px;
+    background: #e8efe9;
+    color: var(--gs-navy-deep);
+    font-weight: 650;
+}
+
+.gs-mention-suggestions {
+    position: absolute;
+    z-index: 20;
+    width: min(100%, 22rem);
+    margin-top: 4px;
+    overflow: hidden;
+    border: 1px solid var(--gs-hairline);
+    border-radius: var(--gs-radius-sm);
+    background: var(--gs-canvas);
+    box-shadow: 0 8px 20px rgba(32, 38, 32, .12);
+}
+
+.gs-mention-option {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    align-items: baseline;
+    padding: 9px 12px;
+    border: 0;
+    background: transparent;
+    color: var(--gs-ink);
+    text-align: left;
+    cursor: pointer;
+}
+
+.gs-mention-option:hover,
+.gs-mention-option[aria-selected="true"] { background: var(--gs-surface); }
+.gs-mention-option span { color: var(--gs-slate); font-size: .9em; }

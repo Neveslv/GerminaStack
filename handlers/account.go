@@ -22,6 +22,10 @@ type AccountRepository interface {
 	UpsertPreferences(context.Context, int64, model.Preference) (model.Preference, error)
 }
 
+type MentionUserRepository interface {
+	ListMentionUsers(context.Context, string) ([]model.User, error)
+}
+
 type publicProfileResponse struct {
 	ID                      int64      `json:"id"`
 	YearID                  int64      `json:"id_year"`
@@ -74,6 +78,44 @@ func (h *AccountHandler) GetPublicProfile(c *gin.Context) {
 		ProfileImageURL: profile.ProfileImageURL, ProfileImageDescription: profile.ProfileImageDescription,
 		Username: profile.Username, CreatedAt: profile.CreatedAt,
 	})
+}
+
+func (h *AccountHandler) ListMentionUsers(c *gin.Context) {
+	prefix := strings.TrimSpace(c.Query("q"))
+	if len(prefix) > 50 || (prefix != "" && !isValidMentionPrefix(prefix)) {
+		writeInvalidAccountRequest(c)
+		return
+	}
+	repository, ok := h.repository.(MentionUserRepository)
+	if !ok {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "serviço indisponível"})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	users, err := repository.ListMentionUsers(ctx, prefix)
+	if err != nil {
+		writeAccountError(c, err)
+		return
+	}
+	response := make([]publicProfileResponse, 0, len(users))
+	for _, user := range users {
+		response = append(response, publicProfileResponse{
+			ID: user.ID, YearID: user.YearID, Name: user.Name,
+			ProfileImageURL: user.ProfileImageURL, ProfileImageDescription: user.ProfileImageDescription,
+			Username: user.Username, CreatedAt: user.CreatedAt,
+		})
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func isValidMentionPrefix(prefix string) bool {
+	for _, character := range prefix {
+		if (character < 'a' || character > 'z') && (character < 'A' || character > 'Z') && (character < '0' || character > '9') && character != '_' && character != '.' {
+			return false
+		}
+	}
+	return true
 }
 
 func (h *AccountHandler) UpdateProfile(c *gin.Context) {

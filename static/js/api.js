@@ -128,6 +128,10 @@ export async function buscarUsuario(username) {
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
+export async function buscarSugestoesDeUsuario(prefixo) {
+    return requisitar(`/api/users/mentions?q=${encodeURIComponent(prefixo)}`);
+}
+
 export async function salvarPerfil(dados) {
     return requisitar('/api/me', {
         method: 'PATCH',

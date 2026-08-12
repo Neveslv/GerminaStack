@@ -2,6 +2,7 @@ import { criarElemento } from '../utils/dom.js';
 import { aplicarImagemNoAvatar, corDoAutor, tomDaMateria, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
+import { montarTextoComMencoes } from './mencoes.js';
 
 function montarChipDeMateria(subject) {
     const chip = criarElemento('a', {
@@ -90,7 +91,11 @@ function montarCabecalho(post, destaque) {
         meta,
         chips,
         montarTitulo(post, destaque),
-        criarElemento('p', { classe: 'gs-post-copy', texto: post.content })
+        (() => {
+            const texto = criarElemento('p', { classe: 'gs-post-copy' });
+            texto.append(montarTextoComMencoes(post.content));
+            return texto;
+        })()
     );
 
     const avatar = criarElemento('span', {

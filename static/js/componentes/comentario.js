@@ -136,7 +136,6 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
     return { formulario, campo };
 }
 
-/** Monta um comentário (tabela `comments`) com suas respostas. */
 export function criarComentario(comentario, minhaReacao = null) {
     const item = criarElemento('div', {
         classe: 'gs-comment',
@@ -193,18 +192,12 @@ export function criarComentario(comentario, minhaReacao = null) {
         botaoResponder.setAttribute('aria-expanded', String(!aberto));
         formulario.hidden = aberto;
 
-        // Levar o foco para o campo recém-aberto evita que quem usa teclado
-        // precise tabular de volta por toda a thread para alcançá-lo.
         if (!aberto) campo.focus();
     });
 
     return item;
 }
 
-/**
- * Monta a thread inteira já com a reação do usuário em cada item.
- * As reações são buscadas em paralelo para a thread não abrir em cascata.
- */
 export async function criarThread(comentarios) {
     const fragmento = document.createDocumentFragment();
 

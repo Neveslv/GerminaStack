@@ -1,4 +1,4 @@
-import { API_BASE_URL, ROTA_LOGIN, TIMEOUT_MS } from './config.js';
+import { API_BASE_URL, ROTA_LOGIN, TIMEOUT_MS, NO_CONTENT, NAO_AUTORIZADO } from './config.js';
 
 export class ErroDeApi extends Error {
     constructor(mensagem, status = 0) {
@@ -33,16 +33,16 @@ async function requisitar(caminho, opcoes = {}) {
             headers: { 'Content-Type': 'application/json', ...opcoes.headers }
         });
 
-        if (resposta.status === 401 && !caminho.startsWith('/api/login')) {
+        if (resposta.status === NAO_AUTORIZADO && !caminho.startsWith('/api/login')) {
             encerrarSessao();
-            throw new ErroDeApi('Sessão expirada.', 401);
+            throw new ErroDeApi('Sessão expirada.', NAO_AUTORIZADO);
         }
 
         if (!resposta.ok) {
             throw new ErroDeApi(await lerMensagemDeErro(resposta), resposta.status);
         }
 
-        return resposta.status === 204 ? null : await resposta.json();
+        return resposta.status === NO_CONTENT ? null : await resposta.json();
     } catch (erro) {
         if (erro instanceof ErroDeApi) throw erro;
         if (erro.name === 'AbortError') {
@@ -135,11 +135,23 @@ export async function salvarPerfil(dados) {
     });
 }
 
-export async function listarUsuariosAdmin({ page = 1, q = '' } = {}) { return requisitar(`/api/admin/users?page=${page}&q=${encodeURIComponent(q)}`); }
-export async function listarPostsAdmin({ page = 1, q = '' } = {}) { return requisitar(`/api/admin/posts?page=${page}&q=${encodeURIComponent(q)}`); }
-export async function banirUsuario(id, enabled = true) { return requisitar(`/api/admin/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
-export async function definirAdmin(id, enabled) { return requisitar(`/api/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
-export async function excluirPost(id) { return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); }
+export async function listarUsuariosAdmin({ page = 1, q = '' } = {}) {
+    return requisitar(`/api/admin/users?page=${page}&q=${encodeURIComponent(q)}`);
+}
+
+export async function listarPostsAdmin({ page = 1, q = '' } = {}) {
+    return requisitar(`/api/admin/posts?page=${page}&q=${encodeURIComponent(q)}`);
+}
+export async function banirUsuario(id, enabled = true) { 
+    return requisitar(`/api/admin/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); 
+}
+export async function definirAdmin(id, enabled) { 
+    return requisitar(`/api/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); 
+}
+
+export async function excluirPost(id) { 
+    return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); 
+}
 
 export async function listarPostsDoAutor(idAutor) {
     const [posts, materias, usuario] = await Promise.all([
@@ -171,9 +183,9 @@ export async function reagir({ tipo, id, reacao }) {
     reacoesDaSessao.set(chave, atual);
     return {
         reacao: atual,
-		likes: atualizado.likes,
-		dislikes: atualizado.dislikes,
-		absolutos: true
+        likes: atualizado.likes,
+        dislikes: atualizado.dislikes,
+        absolutos: true
     };
 }
 
@@ -214,8 +226,8 @@ export async function buscarMeuPerfil() {
 }
 
 function normalizarAutor(id, usuario, name, username, imageUrl, imageDescription) {
-	if (id === usuario.id) return usuario;
-	return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
+    if (id === usuario.id) return usuario;
+    return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
 }
 
 function normalizarMensagem(item, usuario) {

@@ -21,7 +21,7 @@ func TestPostgresDiscussionRepositoryListsPostsWithFiltersAndPagination(t *testi
 	const query = `SELECT p.id, p.id_user, p.id_subject, p.title, p.image_url, p.image_description, p.content, p.likes, p.dislikes,
 	       (SELECT COUNT(*) FROM comments WHERE id_post = p.id), u.name, u.username, u.profile_image_url, u.profile_image_description, p.created_at
 FROM posts p JOIN users u ON u.id = p.id_user WHERE p.id_subject = $1 AND p.id_user = $2 ORDER BY p.created_at DESC, p.id DESC LIMIT $3 OFFSET $4`
-	mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(subjectID, authorID, 20, int64(20)).WillReturnRows(
+	mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(subjectID, authorID, 21, int64(20)).WillReturnRows(
 		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "comments_count", "author_name", "author_username", "author_image_url", "author_image_description", "created_at"}).
 			AddRow(int64(9), authorID, subjectID, "Title", nil, nil, "Content", int64(2), int64(1), int64(3), "Bruno Salles", "bruno.salles", nil, nil, created),
 	)
@@ -38,7 +38,7 @@ func TestPostgresDiscussionRepositoryReturnsEmptyReadLists(t *testing.T) {
 	db, mock := newCatalogMock(t)
 	mock.ExpectQuery("SELECT c.id, c.id_post, c.id_user, c.content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "content", "likes", "dislikes", "author_name", "author_username", "created_at"}))
 	mock.ExpectQuery("SELECT c.id, c.id_comment, c.id_user, c.content").WillReturnRows(sqlmock.NewRows([]string{"id", "id_comment", "id_user", "content", "likes", "dislikes", "author_name", "author_username", "created_at"}))
-	mock.ExpectQuery("SELECT id, id_post, id_user, text_show").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "text_show", "is_read", "created_at"}))
+	mock.ExpectQuery("SELECT id, id_post, id_user, text_show").WillReturnRows(sqlmock.NewRows([]string{"id", "id_post", "id_user", "text_show", "is_read", "is_hidden", "created_at"}))
 	repository := NewPostgresDiscussionRepository(db)
 	pagination := Pagination{Page: 1, PageSize: 20}
 	comments, commentErr := repository.ListComments(context.Background(), 1, pagination)
@@ -61,6 +61,48 @@ func TestPostgresDiscussionRepositoryUsesDatabaseFunctions(t *testing.T) {
 	}
 	if err := repository.MarkNotificationsRead(context.Background(), 2); err != nil {
 		t.Fatalf("MarkNotificationsRead() error = %v", err)
+	}
+	assertCatalogExpectations(t, mock)
+}
+
+func TestPostgresDiscussionRepositorySeparatesInboxFromHistoryAndHidesRead(t *testing.T) {
+	t.Parallel()
+	db, mock := newCatalogMock(t)
+	query := `SELECT id, id_post, id_user, text_show, is_read, is_hidden, created_at
+FROM notifications
+WHERE id_user = $1 AND is_hidden = FALSE AND is_read = FALSE
+ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`
+	mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(int64(2), 20, int64(0)).WillReturnRows(
+		sqlmock.NewRows([]string{"id", "id_post", "id_user", "text_show", "is_read", "is_hidden", "created_at"}).
+			AddRow(int64(9), int64(4), int64(2), "Nova menção", false, false, nil),
+	)
+	historyQuery := `SELECT id, id_post, id_user, text_show, is_read, is_hidden, created_at
+FROM notifications
+WHERE id_user = $1
+ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3`
+	mock.ExpectQuery(regexp.QuoteMeta(historyQuery)).WithArgs(int64(2), 20, int64(0)).WillReturnRows(
+		sqlmock.NewRows([]string{"id", "id_post", "id_user", "text_show", "is_read", "is_hidden", "created_at"}).
+			AddRow(int64(8), nil, int64(2), "Antiga", true, true, nil),
+	)
+	repository := NewPostgresDiscussionRepository(db)
+	inbox, err := repository.ListNotifications(context.Background(), 2, NotificationFilter{Unread: true, Pagination: Pagination{Page: 1, PageSize: 20}})
+	if err != nil || len(inbox) != 1 || inbox[0].IsHidden {
+		t.Fatalf("inbox = %#v, %v", inbox, err)
+	}
+	history, err := repository.ListNotifications(context.Background(), 2, NotificationFilter{History: true, Pagination: Pagination{Page: 1, PageSize: 20}})
+	if err != nil || len(history) != 1 || !history[0].IsHidden || !history[0].IsRead {
+		t.Fatalf("history = %#v, %v", history, err)
+	}
+	assertCatalogExpectations(t, mock)
+}
+
+func TestPostgresDiscussionRepositoryClearsOnlyReadNotificationsWithoutDeleting(t *testing.T) {
+	t.Parallel()
+	db, mock := newCatalogMock(t)
+	mock.ExpectExec(regexp.QuoteMeta(`UPDATE notifications SET is_hidden = TRUE WHERE id_user = $1 AND is_read = TRUE AND is_hidden = FALSE`)).
+		WithArgs(int64(2)).WillReturnResult(sqlmock.NewResult(0, 2))
+	if err := NewPostgresDiscussionRepository(db).HideReadNotifications(context.Background(), 2); err != nil {
+		t.Fatalf("HideReadNotifications() error = %v", err)
 	}
 	assertCatalogExpectations(t, mock)
 }

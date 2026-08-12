@@ -24,7 +24,8 @@ import {
 	buscarMeuPerfil,
     buscarPreferencias,
     listarNotificacoes,
-    marcarNotificacoesComoLidas
+    marcarNotificacoesComoLidas,
+    limparNotificacoesLidas
 } from '../api.js';
 import {
     aplicarPreferencias,
@@ -78,7 +79,7 @@ async function mostrarAdministracao() {
     } catch {}
 }
 
-function criarItemDeNotificacao(notificacao) {
+export function criarItemDeNotificacao(notificacao) {
     const item = criarElemento('article', {
         classe: `gs-notif-item${notificacao.is_read ? '' : ' is-nao-lida'}`
     });
@@ -118,7 +119,8 @@ async function carregarNotificacoes() {
     const marcador = document.querySelector('[data-nao-lidas]');
     const lista = document.querySelector('[data-notif-lista]');
     const botaoMarcar = document.querySelector('[data-notif-marcar-lidas]');
-    if (!marcador || !lista || !botaoMarcar) return;
+    const botaoLimpar = document.querySelector('[data-notif-limpar-lidas]');
+    if (!marcador || !lista || !botaoMarcar || !botaoLimpar) return;
 
     const gatilho = marcador.closest('[data-gs-menu-trigger]');
     let notificacoes = [];
@@ -139,6 +141,7 @@ async function carregarNotificacoes() {
         }
 
         botaoMarcar.disabled = naoLidas === 0;
+        botaoLimpar.disabled = notificacoes.every((notificacao) => !notificacao.is_read);
 
         lista.replaceChildren();
 
@@ -191,6 +194,19 @@ async function carregarNotificacoes() {
                 message: erro.message,
                 tone: 'danger'
             });
+        }
+    });
+
+    botaoLimpar.addEventListener('click', async () => {
+        botaoLimpar.disabled = true;
+        try {
+            await limparNotificacoesLidas();
+            notificacoes = notificacoes.filter((notificacao) => !notificacao.is_read);
+            renderizar();
+            window.GerminaStackUI?.showToast({ title: 'Caixa limpa', message: 'As notificações lidas continuam no seu histórico.', tone: 'success' });
+        } catch (erro) {
+            renderizar();
+            window.GerminaStackUI?.showToast({ title: 'Não foi possível limpar', message: erro.message, tone: 'danger' });
         }
     });
 }

@@ -44,8 +44,10 @@
                         <button class="gs-btn gs-btn-ghost" type="button" data-notif-marcar-lidas disabled>
                             Marcar todas como lidas
                         </button>
+                        <button class="gs-btn gs-btn-ghost" type="button" data-notif-limpar-lidas disabled>Limpar lidas</button>
                     </div>
                     <div class="gs-notif-lista" data-notif-lista></div>
+                    <a class="gs-btn gs-btn-ghost" href="#historico-notificacoes">Todas as notificações</a>
                 </div>
             </div>
             <a class="gs-nav-link" href="/preferencias">Acessibilidade</a>
@@ -67,6 +69,12 @@
                 <div id="estado-publicacoes" role="status" aria-live="polite" hidden></div>
 
                 <div class="gs-stack" id="publicacoes-do-usuario"></div>
+            </section>
+
+            <section class="gs-stack" id="historico-notificacoes" aria-labelledby="titulo-historico-notificacoes">
+                <h2 class="gs-side-title" id="titulo-historico-notificacoes">Todas as notificações</h2>
+                <div id="estado-notificacoes" role="status" aria-live="polite" hidden></div>
+                <div class="gs-stack" id="historico-de-notificacoes"></div>
             </section>
         </div>
     </main>

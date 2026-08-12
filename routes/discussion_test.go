@@ -30,7 +30,7 @@ func TestRegisterDiscussionRoutesRegistersOnlyDocumentedSurface(t *testing.T) {
 		"GET /api/comments/:id/replies", "POST /api/comments/:id/replies",
 		"PATCH /api/comments/:id", "DELETE /api/comments/:id", "PATCH /api/replies/:id", "DELETE /api/replies/:id",
 		"PUT /api/posts/:id/reaction", "PUT /api/comments/:id/reaction", "PUT /api/replies/:id/reaction",
-		"GET /api/notifications", "PATCH /api/notifications/read-all",
+		"GET /api/notifications", "GET /api/notifications/history", "PATCH /api/notifications/read-all", "PATCH /api/notifications/clear-read",
 	} {
 		if !got[want] {
 			t.Fatalf("route %q not registered; got %#v", want, got)
@@ -121,5 +121,8 @@ func (f *routeDiscussionRepositoryFake) ListNotifications(_ context.Context, use
 	return []model.Notification{}, nil
 }
 func (f *routeDiscussionRepositoryFake) MarkNotificationsRead(context.Context, int64) error {
+	return nil
+}
+func (f *routeDiscussionRepositoryFake) HideReadNotifications(context.Context, int64) error {
 	return nil
 }

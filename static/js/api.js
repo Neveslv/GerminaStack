@@ -54,14 +54,15 @@ async function requisitar(caminho, opcoes = {}) {
     }
 }
 
-export async function listarPosts({ idSubject } = {}) {
-    const query = idSubject ? `?subject_id=${idSubject}` : '';
-    const [posts, materias, usuario] = await Promise.all([
-        requisitar(`/api/posts${query}`),
+export async function listarPosts({ idSubject, page = 1, pageSize = 20 } = {}) {
+    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+    if (idSubject) params.set('subject_id', String(idSubject));
+    const [pagina, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts?${params}`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
+    return { ...pagina, items: await Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario))) };
 }
 
 export async function listarMaterias() {
@@ -146,12 +147,12 @@ export async function definirAdmin(id, enabled) { return requisitar(`/api/admin/
 export async function excluirPost(id) { return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); }
 
 export async function listarPostsDoAutor(idAutor) {
-    const [posts, materias, usuario] = await Promise.all([
-        requisitar(`/api/posts?author_id=${idAutor}`),
+    const [pagina, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts?author_id=${idAutor}&page=1&page_size=100`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
+    return Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario)));
 }
 
 
@@ -159,22 +160,33 @@ export async function listarNotificacoes() {
     return requisitar('/api/notifications');
 }
 
+export async function listarHistoricoNotificacoes({ page = 1, pageSize = 20 } = {}) {
+    const todas = [];
+    let pagina = page;
+    while (true) {
+        const itens = await requisitar(`/api/notifications/history?page=${pagina}&page_size=${pageSize}`);
+        todas.push(...itens);
+        if (itens.length < pageSize) return todas;
+        pagina += 1;
+    }
+}
+
 export async function marcarNotificacoesComoLidas() {
     return requisitar('/api/notifications/read-all', { method: 'PATCH' });
 }
 
+export async function limparNotificacoesLidas() {
+    return requisitar('/api/notifications/clear-read', { method: 'PATCH' });
+}
+
 export async function reagir({ tipo, id, reacao }) {
     const recurso = { post: 'posts', comment: 'comments', comment_on_comment: 'replies' }[tipo];
-    const chave = `${tipo}:${id}`;
-    const anterior = reacoesDaSessao.get(chave) ?? null;
     const atualizado = await requisitar(`/api/${recurso}/${id}/reaction`, {
         method: 'PUT',
         body: JSON.stringify({ reaction_type: reacao })
     });
-    const atual = anterior === reacao ? null : reacao;
-    reacoesDaSessao.set(chave, atual);
     return {
-        reacao: atual,
+		reacao: atualizado.reacao ?? null,
 		likes: atualizado.likes,
 		dislikes: atualizado.dislikes,
 		absolutos: true
@@ -182,7 +194,9 @@ export async function reagir({ tipo, id, reacao }) {
 }
 
 export async function buscarMinhaReacao(tipo, id) {
-    return reacoesDaSessao.get(`${tipo}:${id}`) ?? null;
+    const recurso = { post: 'post', comment: 'comment', comment_on_comment: 'comment_on_comment' }[tipo];
+    const reacao = await requisitar(`/api/reactions?message_type=${recurso}&id_message=${id}`);
+    return reacao ?? null;
 }
 
 export async function criarComentario({ tipo, idPai, content }) {
@@ -206,7 +220,6 @@ export async function salvarPreferencias(preferencias) {
 }
 
 let perfilAtual;
-const reacoesDaSessao = new Map();
 const perfisPublicos = new Map();
 
 export async function buscarMeuPerfil() {

@@ -37,6 +37,7 @@ type DiscussionRepository interface {
 	React(context.Context, int64, int64, string, model.ReactionType) error
 	ListNotifications(context.Context, int64, database.NotificationFilter) ([]model.Notification, error)
 	MarkNotificationsRead(context.Context, int64) error
+	HideReadNotifications(context.Context, int64) error
 }
 
 type DiscussionHandler struct {
@@ -320,7 +321,11 @@ func (h *DiscussionHandler) ListPosts(c *gin.Context) {
 	if posts == nil {
 		posts = []model.Post{}
 	}
-	c.JSON(http.StatusOK, posts)
+	hasMore := len(posts) > pagination.PageSize
+	if hasMore {
+		posts = posts[:pagination.PageSize]
+	}
+	c.JSON(http.StatusOK, model.PostPage{Items: posts, HasMore: hasMore})
 }
 
 func decodePostInput(c *gin.Context, existing *model.Post, requireCore bool) (database.PostInput, bool) {
@@ -553,6 +558,28 @@ func (h *DiscussionHandler) ListNotifications(c *gin.Context) {
 	c.JSON(http.StatusOK, notifications)
 }
 
+func (h *DiscussionHandler) ListNotificationHistory(c *gin.Context) {
+	userID, ok := discussionUserID(c)
+	if !ok {
+		return
+	}
+	_, pagination, ok := discussionQuery(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	notifications, err := h.repository.ListNotifications(ctx, userID, database.NotificationFilter{History: true, Pagination: pagination})
+	if err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	if notifications == nil {
+		notifications = []model.Notification{}
+	}
+	c.JSON(http.StatusOK, notifications)
+}
+
 func (h *DiscussionHandler) MarkNotificationsRead(c *gin.Context) {
 	userID, ok := discussionUserID(c)
 	if !ok {
@@ -561,6 +588,21 @@ func (h *DiscussionHandler) MarkNotificationsRead(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
 	if err := h.repository.MarkNotificationsRead(ctx, userID); err != nil {
+		writeDiscussionError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+	c.Writer.WriteHeaderNow()
+}
+
+func (h *DiscussionHandler) HideReadNotifications(c *gin.Context) {
+	userID, ok := discussionUserID(c)
+	if !ok {
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
+	defer cancel()
+	if err := h.repository.HideReadNotifications(ctx, userID); err != nil {
 		writeDiscussionError(c, err)
 		return
 	}

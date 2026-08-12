@@ -8,5 +8,6 @@ type Notification struct {
 	UserID    int64      `db:"id_user" json:"id_user"`
 	TextShow  string     `db:"text_show" json:"text_show"`
 	IsRead    bool       `db:"is_read" json:"is_read"`
+	IsHidden  bool       `db:"is_hidden" json:"is_hidden"`
 	CreatedAt *time.Time `db:"created_at" json:"created_at"`
 }

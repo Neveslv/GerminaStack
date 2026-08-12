@@ -9,10 +9,14 @@ const estado = criarPainelDeEstado(document.querySelector('#estado-feed'));
 const trending = document.querySelector('#trending-posts');
 const anteriorTrending = document.querySelector('[data-trending-anterior]');
 const proximoTrending = document.querySelector('[data-trending-proximo]');
+const carregarMais = document.querySelector('#carregar-mais');
 
 const filtros = { idSubject: null, termo: '' };
 
 let postsCarregados = [];
+let paginaAtual = 0;
+let haMaisPosts = true;
+let carregandoMais = false;
 let indiceTrending = 0;
 let temporizadorTrending;
 let navegarTrending = () => {};
@@ -97,13 +101,37 @@ async function carregarPosts(silencioso = false) {
     if (!silencioso) estado.carregando('Carregando publicações…');
 
     try {
-        postsCarregados = await listarPosts({ idSubject: filtros.idSubject });
+        paginaAtual = 1;
+        const pagina = await listarPosts({ idSubject: filtros.idSubject, page: paginaAtual });
+        postsCarregados = pagina.items;
+        haMaisPosts = pagina.has_more;
+        if (carregarMais) carregarMais.hidden = !haMaisPosts;
+        if (carregarMais) carregarMais.textContent = haMaisPosts ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
         if (!filtros.idSubject) renderizarTrending(postsCarregados);
         await renderizarFeed();
     } catch (erro) {
         if (silencioso) return;
         feed.replaceChildren();
         estado.erro(erro.message, 'Recarregue a página para tentar de novo.');
+    }
+}
+
+async function carregarMaisPosts() {
+    if (carregandoMais || !haMaisPosts) return;
+    carregandoMais = true;
+    try {
+        const pagina = await listarPosts({ idSubject: filtros.idSubject, page: paginaAtual + 1 });
+        const ids = new Set(postsCarregados.map((post) => post.id));
+        postsCarregados.push(...pagina.items.filter((post) => !ids.has(post.id)));
+        paginaAtual += 1;
+        haMaisPosts = pagina.has_more;
+        if (carregarMais) carregarMais.hidden = !haMaisPosts;
+        if (carregarMais) carregarMais.textContent = haMaisPosts ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
+        await renderizarFeed();
+    } catch (erro) {
+        estado.erro(erro.message, 'Tentar novamente');
+    } finally {
+        carregandoMais = false;
     }
 }
 
@@ -150,19 +178,18 @@ function preencherEstatisticas(posts, materias) {
 async function carregarMaterias() {
     try {
         const materias = await listarMaterias();
-        const todos = await listarPosts();
+        const todos = await listarPosts({ pageSize: 100 });
 
         const fragmento = document.createDocumentFragment();
-        fragmento.append(criarLinhaDeMateria('Todas', null, todos.length));
+        fragmento.append(criarLinhaDeMateria('Todas', null, materias.reduce((soma, materia) => soma + materia.posts_count, 0)));
 
         materias.forEach((materia) => {
-            const total = todos.filter((post) => post.subject.id === materia.id).length;
-            fragmento.append(criarLinhaDeMateria(materia.subject, materia.id, total));
+            fragmento.append(criarLinhaDeMateria(materia.subject, materia.id, materia.posts_count));
         });
 
         listaMaterias.append(fragmento);
         marcarMateriaAtiva();
-        preencherEstatisticas(todos, materias);
+        preencherEstatisticas(todos.items, materias);
     } catch {
         listaMaterias.append(criarLinhaDeMateria('Todas', null, 0));
         marcarMateriaAtiva();
@@ -220,6 +247,12 @@ campoBusca.addEventListener(
 
 carregarMaterias();
 carregarPosts();
+carregarMais?.addEventListener('click', carregarMaisPosts);
+if (carregarMais && 'IntersectionObserver' in window) {
+    new IntersectionObserver((entradas) => {
+        if (entradas.some((entrada) => entrada.isIntersecting)) carregarMaisPosts();
+    }, { rootMargin: '240px' }).observe(carregarMais);
+}
 window.setInterval(() => {
     if (!document.hidden) carregarPosts(true);
 }, 10000);

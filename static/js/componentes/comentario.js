@@ -134,7 +134,7 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
 }
 
 /** Monta um comentário (tabela `comments`) com suas respostas. */
-export function criarComentario(comentario, minhaReacao = null) {
+export function criarComentario(comentario, minhaReacao = null, reacoesRespostas = new Map()) {
     const item = criarElemento('div', {
         classe: 'gs-comment',
         atributos: { 'data-comentario-id': String(comentario.id) }
@@ -172,7 +172,9 @@ export function criarComentario(comentario, minhaReacao = null) {
     item.append(linha);
 
     const respostas = criarElemento('div');
-    comentario.replies?.forEach((resposta) => respostas.append(criarResposta(resposta)));
+    comentario.replies?.forEach((resposta) => {
+        respostas.append(criarResposta(resposta, reacoesRespostas.get(resposta.id) ?? null));
+    });
     item.append(respostas);
 
     const { formulario, campo } = criarFormularioDeResposta(comentario.id, (resposta) => {
@@ -209,8 +211,14 @@ export async function criarThread(comentarios) {
         comentarios.map((comentario) => buscarMinhaReacao('comment', comentario.id))
     );
 
+    const reacoesRespostas = await Promise.all(
+        comentarios.flatMap((comentario) => comentario.replies ?? [])
+            .map(async (resposta) => [resposta.id, await buscarMinhaReacao('comment_on_comment', resposta.id)])
+    );
+    const reacoesPorResposta = new Map(reacoesRespostas);
+
     comentarios.forEach((comentario, indice) => {
-        fragmento.append(criarComentario(comentario, reacoes[indice]));
+        fragmento.append(criarComentario(comentario, reacoes[indice], reacoesPorResposta));
     });
 
     return fragmento;

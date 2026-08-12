@@ -1,4 +1,5 @@
-import { buscarMeuPerfil, buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, salvarPerfil, sair } from '../api.js';
+import { buscarMeuPerfil, buscarUsuario, listarPostsDoAutor, buscarMinhaReacao, listarHistoricoNotificacoes, salvarPerfil, sair } from '../api.js';
+import { criarItemDeNotificacao } from '../componentes/cabecalho.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
 import { corDoAutor, fotoDoAutor, inicialDoNome } from '../utils/identidade.js';
@@ -9,6 +10,9 @@ const numeros = document.querySelector('#numeros-do-perfil');
 const publicacoes = document.querySelector('#publicacoes-do-usuario');
 const estadoPerfil = criarPainelDeEstado(document.querySelector('#estado-perfil'));
 const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
+const historico = document.querySelector('#historico-de-notificacoes');
+const estadoNotificacoes = criarPainelDeEstado(document.querySelector('#estado-notificacoes'));
+const secaoNotificacoes = document.querySelector('#historico-notificacoes');
 
 const usuarioDaUrl = new URLSearchParams(window.location.search).get('usuario');
 let ehMeuPerfil = false;
@@ -195,6 +199,26 @@ async function montarPublicacoes(usuario, posts) {
     inicializarKit(publicacoes);
 }
 
+async function montarHistoricoNotificacoes() {
+    if (!ehMeuPerfil) {
+        secaoNotificacoes?.remove();
+        return;
+    }
+    estadoNotificacoes.carregando('Carregando histórico de notificações…');
+    try {
+        const notificacoes = await listarHistoricoNotificacoes();
+        historico.replaceChildren();
+        if (notificacoes.length === 0) {
+            estadoNotificacoes.vazio('Nenhuma notificação no histórico.');
+            return;
+        }
+        historico.append(...notificacoes.map(criarItemDeNotificacao));
+        estadoNotificacoes.ocultar();
+    } catch (erro) {
+        estadoNotificacoes.erro(erro.message);
+    }
+}
+
 async function carregarPagina() {
     estadoPerfil.carregando('Carregando perfil…');
     estadoPublicacoes.carregando('Carregando publicações…');
@@ -210,6 +234,7 @@ async function carregarPagina() {
         const posts = await listarPostsDoAutor(usuario.id);
         montarNumeros(posts);
         await montarPublicacoes(usuario, posts);
+        await montarHistoricoNotificacoes();
     } catch (erro) {
         estadoPerfil.erro(erro.message, 'Confira o endereço ou volte ao feed.');
         estadoPublicacoes.ocultar();

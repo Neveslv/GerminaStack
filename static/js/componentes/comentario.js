@@ -2,6 +2,7 @@ import { criarElemento } from '../utils/dom.js';
 import { aplicarImagemNoAvatar, corDoAutor, inicialDoNome } from '../utils/identidade.js';
 import { formatarDataRelativa, formatarDataCompleta } from '../utils/data.js';
 import { criarReacoes } from './reacoes.js';
+import { ativarAutocompleteDeMencoes, montarTextoComMencoesEGifs } from './mencoes.js';
 import { criarComentario as enviarComentario, buscarMinhaReacao } from '../api.js';
 
 function criarAvatar(autor) {
@@ -28,12 +29,7 @@ function criarBolha(item, classeBolha) {
     );
 
     const texto = criarElemento('p');
-    const partes = item.content.split(/(https?:\/\/\S+\.gif(?:\?\S*)?)/gi);
-    partes.forEach((parte) => {
-        if (/^https?:\/\/\S+\.gif(?:\?\S*)?$/i.test(parte)) {
-            texto.append(criarElemento('img', { atributos: { src: parte, alt: 'GIF enviado na resposta', loading: 'lazy' } }));
-        } else texto.append(document.createTextNode(parte));
-    });
+    texto.append(montarTextoComMencoesEGifs(item.content));
     const bolha = criarElemento('div', { classe: classeBolha });
     bolha.append(meta, texto);
     return bolha;
@@ -99,6 +95,7 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
     });
 
     formulario.append(rotulo, campo, enviar);
+    ativarAutocompleteDeMencoes(campo);
 
     formulario.addEventListener('submit', async (evento) => {
         evento.preventDefault();
@@ -136,7 +133,8 @@ function criarFormularioDeResposta(idComentario, aoEnviar) {
     return { formulario, campo };
 }
 
-export function criarComentario(comentario, minhaReacao = null) {
+/** Monta um comentário (tabela `comments`) com suas respostas. */
+export function criarComentario(comentario, minhaReacao = null, reacoesRespostas = new Map()) {
     const item = criarElemento('div', {
         classe: 'gs-comment',
         atributos: { 'data-comentario-id': String(comentario.id) }
@@ -174,7 +172,9 @@ export function criarComentario(comentario, minhaReacao = null) {
     item.append(linha);
 
     const respostas = criarElemento('div');
-    comentario.replies?.forEach((resposta) => respostas.append(criarResposta(resposta)));
+    comentario.replies?.forEach((resposta) => {
+        respostas.append(criarResposta(resposta, reacoesRespostas.get(resposta.id) ?? null));
+    });
     item.append(respostas);
 
     const { formulario, campo } = criarFormularioDeResposta(comentario.id, (resposta) => {
@@ -192,12 +192,18 @@ export function criarComentario(comentario, minhaReacao = null) {
         botaoResponder.setAttribute('aria-expanded', String(!aberto));
         formulario.hidden = aberto;
 
+        // Levar o foco para o campo recém-aberto evita que quem usa teclado
+        // precise tabular de volta por toda a thread para alcançá-lo.
         if (!aberto) campo.focus();
     });
 
     return item;
 }
 
+/**
+ * Monta a thread inteira já com a reação do usuário em cada item.
+ * As reações são buscadas em paralelo para a thread não abrir em cascata.
+ */
 export async function criarThread(comentarios) {
     const fragmento = document.createDocumentFragment();
 
@@ -205,8 +211,14 @@ export async function criarThread(comentarios) {
         comentarios.map((comentario) => buscarMinhaReacao('comment', comentario.id))
     );
 
+    const reacoesRespostas = await Promise.all(
+        comentarios.flatMap((comentario) => comentario.replies ?? [])
+            .map(async (resposta) => [resposta.id, await buscarMinhaReacao('comment_on_comment', resposta.id)])
+    );
+    const reacoesPorResposta = new Map(reacoesRespostas);
+
     comentarios.forEach((comentario, indice) => {
-        fragmento.append(criarComentario(comentario, reacoes[indice]));
+        fragmento.append(criarComentario(comentario, reacoes[indice], reacoesPorResposta));
     });
 
     return fragmento;

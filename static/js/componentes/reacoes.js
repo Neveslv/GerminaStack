@@ -48,7 +48,7 @@ function criarBotao(reacao, total, ativo) {
 
     botao.dataset.state = ativo ? 'on' : 'off';
     botao.dataset.total = String(total);
-    if (reacao === 'like' && ativo) botao.classList.add('is-danger');
+    if (ativo) botao.classList.add('is-danger');
 
     const numero = criarElemento('span', { texto: String(total) });
     numero.dataset.numero = '';
@@ -67,7 +67,7 @@ function atualizarBotao(botao, total, ativo) {
     botao.setAttribute('aria-pressed', String(ativo));
     botao.setAttribute('aria-label', descrever(reacao, total, ativo));
     botao.querySelector('[data-numero]').textContent = String(total);
-    botao.classList.toggle('is-danger', reacao === 'like' && ativo);
+    botao.classList.toggle('is-danger', ativo);
 }
 
 export function criarReacoes({ tipo, id, likes, dislikes, minhaReacao }) {

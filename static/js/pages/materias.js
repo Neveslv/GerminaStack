@@ -4,15 +4,19 @@ import { criarElemento, criarPainelDeEstado, inicializarKit } from '../utils/dom
 import { tomDaMateria } from '../utils/identidade.js';
 
 const grade = document.querySelector('#grade-materias');
-const resumo = document.querySelector('#resumo-materias');
 const listaPublicacoes = document.querySelector('#publicacoes-da-materia');
 const tituloPublicacoes = document.querySelector('#titulo-publicacoes');
 const estadoMaterias = criarPainelDeEstado(document.querySelector('#estado-materias'));
 const estadoPublicacoes = criarPainelDeEstado(document.querySelector('#estado-publicacoes'));
+const carregarMais = criarElemento('button', { classe: 'gs-btn gs-btn-ghost', texto: 'Carregar mais', atributos: { type: 'button', hidden: 'true' } });
+listaPublicacoes.after(carregarMais);
 
 let materiasCarregadas = [];
 let todosOsPosts = [];
 let materiaAtiva = null;
+let paginaMateria = 1;
+let haMaisMateria = false;
+let carregandoMateria = false;
 
 function lerMateriaDaUrl() {
     const id = new URLSearchParams(window.location.search).get('id');
@@ -20,7 +24,7 @@ function lerMateriaDaUrl() {
 }
 
 function totalDaMateria(idMateria) {
-    return todosOsPosts.filter((post) => post.subject.id === idMateria).length;
+    return materiasCarregadas.find((materia) => materia.id === idMateria)?.posts_count ?? 0;
 }
 
 function nomeDaMateria(idMateria) {
@@ -74,40 +78,6 @@ function renderizarMaterias() {
     estadoMaterias.ocultar();
 }
 
-function renderizarResumo() {
-    resumo.replaceChildren();
-
-    const fragmento = document.createDocumentFragment();
-
-    const linhaTodas = criarElemento('a', {
-        classe: 'gs-side-row',
-        atributos: { href: '/materias' }
-    });
-    linhaTodas.append(
-        criarElemento('span', { texto: 'Todas as matérias' }),
-        criarElemento('span', { classe: 'gs-badge', texto: String(todosOsPosts.length) })
-    );
-    fragmento.append(linhaTodas);
-
-    materiasCarregadas.forEach((materia) => {
-        const linha = criarElemento('a', {
-            classe: 'gs-side-row',
-            atributos: { href: `/materias?id=${materia.id}` }
-        });
-
-        if (materia.id === materiaAtiva) linha.setAttribute('aria-current', 'true');
-
-        linha.append(
-            criarElemento('span', { texto: materia.subject }),
-            criarElemento('span', { classe: 'gs-badge', texto: String(totalDaMateria(materia.id)) })
-        );
-
-        fragmento.append(linha);
-    });
-
-    resumo.append(fragmento);
-}
-
 async function renderizarPublicacoes() {
     listaPublicacoes.replaceChildren();
 
@@ -126,7 +96,12 @@ async function renderizarPublicacoes() {
     estadoPublicacoes.carregando(`Carregando publicações de ${nome}…`);
 
     try {
-        const posts = await listarPosts({ idSubject: materiaAtiva });
+        paginaMateria = 1;
+        const pagina = await listarPosts({ idSubject: materiaAtiva, page: paginaMateria });
+        const posts = pagina.items;
+        haMaisMateria = pagina.has_more;
+        carregarMais.hidden = !haMaisMateria;
+        carregarMais.textContent = haMaisMateria ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
 
         if (posts.length === 0) {
             estadoPublicacoes.vazio(
@@ -153,8 +128,33 @@ async function renderizarPublicacoes() {
             `${posts.length} ${posts.length === 1 ? 'publicação' : 'publicações'} em ${nome}.`
         );
     } catch (erro) {
-        estadoPublicacoes.erro(erro.message, 'Recarregue a página para tentar de novo.');
+        estadoPublicacoes.erro(erro.message, 'Tentar novamente', renderizarPublicacoes);
     }
+}
+
+carregarMais.addEventListener('click', async () => {
+    if (carregandoMateria || !haMaisMateria || materiaAtiva === null) return;
+    carregandoMateria = true;
+    try {
+        const pagina = await listarPosts({ idSubject: materiaAtiva, page: paginaMateria + 1 });
+        paginaMateria += 1;
+        haMaisMateria = pagina.has_more;
+        const reacoes = await Promise.all(pagina.items.map((post) => buscarMinhaReacao('post', post.id)));
+        pagina.items.forEach((post, indice) => listaPublicacoes.append(criarCartaoDePost(post, { minhaReacao: reacoes[indice] })));
+        carregarMais.hidden = !haMaisMateria;
+        carregarMais.textContent = haMaisMateria ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
+        inicializarKit(listaPublicacoes);
+    } catch (erro) {
+        estadoPublicacoes.erro(erro.message, 'Tentar novamente', () => carregarMais.click());
+    } finally {
+        carregandoMateria = false;
+    }
+});
+
+if ('IntersectionObserver' in window) {
+    new IntersectionObserver((entradas) => {
+        if (entradas.some((entrada) => entrada.isIntersecting)) carregarMais.click();
+    }, { rootMargin: '240px' }).observe(carregarMais);
 }
 
 function selecionarMateria(id) {
@@ -164,7 +164,6 @@ function selecionarMateria(id) {
     window.history.pushState({ id }, '', url);
 
     renderizarMaterias();
-    renderizarResumo();
     renderizarPublicacoes();
 }
 
@@ -180,7 +179,6 @@ grade.addEventListener('click', (evento) => {
 window.addEventListener('popstate', () => {
     materiaAtiva = lerMateriaDaUrl();
     renderizarMaterias();
-    renderizarResumo();
     renderizarPublicacoes();
 });
 
@@ -188,14 +186,14 @@ async function carregarPagina() {
     estadoMaterias.carregando('Carregando matérias…');
 
     try {
-        [materiasCarregadas, todosOsPosts] = await Promise.all([listarMaterias(), listarPosts()]);
+        const pagina = await listarPosts();
+        [materiasCarregadas, todosOsPosts] = await Promise.all([listarMaterias(), Promise.resolve(pagina.items)]);
         materiaAtiva = lerMateriaDaUrl();
 
         renderizarMaterias();
-        renderizarResumo();
         renderizarPublicacoes();
     } catch (erro) {
-        estadoMaterias.erro(erro.message, 'Recarregue a página para tentar de novo.');
+        estadoMaterias.erro(erro.message, 'Tentar novamente', carregarPagina);
         estadoPublicacoes.ocultar();
     }
 }

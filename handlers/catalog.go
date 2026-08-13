@@ -31,9 +31,10 @@ type yearResponse struct {
 }
 
 type subjectResponse struct {
-	ID      int64  `json:"id"`
-	YearID  *int64 `json:"year_id"`
-	Subject string `json:"subject"`
+	ID         int64  `json:"id"`
+	YearID     *int64 `json:"year_id"`
+	Subject    string `json:"subject"`
+	PostsCount int64  `json:"posts_count"`
 }
 
 func (h *CatalogHandler) ListYears(c *gin.Context) {
@@ -87,5 +88,5 @@ func yearDTO(year model.Year) yearResponse {
 }
 
 func subjectDTO(subject model.Subject) subjectResponse {
-	return subjectResponse{ID: subject.ID, YearID: subject.YearID, Subject: subject.Subject}
+	return subjectResponse{ID: subject.ID, YearID: subject.YearID, Subject: subject.Subject, PostsCount: subject.PostsCount}
 }

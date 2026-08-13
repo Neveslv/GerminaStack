@@ -1,5 +1,6 @@
 import { criarPost, listarMaterias } from '../api.js';
 import { criarElemento, criarPainelDeEstado } from '../utils/dom.js';
+import { ativarAutocompleteDeMencoes } from '../componentes/mencoes.js';
 
 const formulario = document.querySelector('#form-publicar');
 const seletorMateria = document.querySelector('#materia');
@@ -11,6 +12,8 @@ const previewImagem = document.querySelector('#preview-imagem');
 const conteudoPreviewImagem = document.querySelector('#preview-imagem-conteudo');
 const statusPreviewImagem = document.querySelector('#preview-imagem-status');
 const estado = criarPainelDeEstado(document.querySelector('#estado-formulario'));
+ativarAutocompleteDeMencoes(document.querySelector('#titulo'));
+ativarAutocompleteDeMencoes(document.querySelector('#conteudo-post'));
 
 const REGRAS = [
     { campo: 'materia', erro: 'erro-materia', mensagem: 'Escolha a matéria da publicação.' },

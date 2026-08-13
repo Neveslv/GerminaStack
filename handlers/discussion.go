@@ -499,36 +499,58 @@ func (h *DiscussionHandler) React(messageType string) gin.HandlerFunc {
 		}
 		ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 		defer cancel()
+		before, err := h.reactionCounts(ctx, messageID, messageType)
+		if err != nil {
+			writeDiscussionError(c, err)
+			return
+		}
 		if err := h.repository.React(ctx, userID, messageID, messageType, request.ReactionType); err != nil {
 			writeDiscussionError(c, err)
 			return
 		}
-		var likes, dislikes int64
-		switch messageType {
-		case "post":
-			item, err := h.repository.GetPost(ctx, messageID)
-			if err != nil {
-				writeDiscussionError(c, err)
-				return
-			}
-			likes, dislikes = item.Likes, item.Dislikes
-		case "comment":
-			item, err := h.repository.GetComment(ctx, messageID)
-			if err != nil {
-				writeDiscussionError(c, err)
-				return
-			}
-			likes, dislikes = item.Likes, item.Dislikes
-		default:
-			item, err := h.repository.GetReply(ctx, messageID)
-			if err != nil {
-				writeDiscussionError(c, err)
-				return
-			}
-			likes, dislikes = item.Likes, item.Dislikes
+		after, err := h.reactionCounts(ctx, messageID, messageType)
+		if err != nil {
+			writeDiscussionError(c, err)
+			return
 		}
-		c.JSON(http.StatusOK, gin.H{"likes": likes, "dislikes": dislikes})
+		c.JSON(http.StatusOK, gin.H{
+			"likes":    after.likes,
+			"dislikes": after.dislikes,
+			"reacao":   reactionAfterToggle(before, after, request.ReactionType),
+		})
 	}
+}
+
+type reactionCounts struct {
+	likes    int64
+	dislikes int64
+}
+
+func (h *DiscussionHandler) reactionCounts(ctx context.Context, messageID int64, messageType string) (reactionCounts, error) {
+	switch messageType {
+	case "post":
+		item, err := h.repository.GetPost(ctx, messageID)
+		return reactionCounts{likes: item.Likes, dislikes: item.Dislikes}, err
+	case "comment":
+		item, err := h.repository.GetComment(ctx, messageID)
+		return reactionCounts{likes: item.Likes, dislikes: item.Dislikes}, err
+	default:
+		item, err := h.repository.GetReply(ctx, messageID)
+		return reactionCounts{likes: item.Likes, dislikes: item.Dislikes}, err
+	}
+}
+
+func reactionAfterToggle(before, after reactionCounts, requested model.ReactionType) *model.ReactionType {
+	var delta int64
+	if requested == model.ReactionTypeLike {
+		delta = after.likes - before.likes
+	} else {
+		delta = after.dislikes - before.dislikes
+	}
+	if delta <= 0 {
+		return nil
+	}
+	return &requested
 }
 
 func (h *DiscussionHandler) ListNotifications(c *gin.Context) {

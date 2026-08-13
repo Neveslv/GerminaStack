@@ -91,6 +91,32 @@ func TestDiscussionHandlerReactsOnlyForAuthenticatedUserWithValidPayload(t *test
 	}
 }
 
+func TestReactionAfterToggleReportsAddedOrRemovedReaction(t *testing.T) {
+	like := model.ReactionTypeLike
+	dislike := model.ReactionTypeDislike
+
+	cases := []struct {
+		name         string
+		before       reactionCounts
+		after        reactionCounts
+		requested    model.ReactionType
+		wantReaction *model.ReactionType
+	}{
+		{name: "adds like", before: reactionCounts{likes: 2}, after: reactionCounts{likes: 3}, requested: like, wantReaction: &like},
+		{name: "removes like", before: reactionCounts{likes: 3}, after: reactionCounts{likes: 2}, requested: like},
+		{name: "switches to dislike", before: reactionCounts{likes: 3, dislikes: 1}, after: reactionCounts{likes: 2, dislikes: 2}, requested: dislike, wantReaction: &dislike},
+	}
+
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			got := reactionAfterToggle(test.before, test.after, test.requested)
+			if (got == nil) != (test.wantReaction == nil) || (got != nil && *got != *test.wantReaction) {
+				t.Fatalf("reactionAfterToggle() = %v, want %v", got, test.wantReaction)
+			}
+		})
+	}
+}
+
 func TestDiscussionHandlerScopesNotificationsToJWTUser(t *testing.T) {
 	t.Parallel()
 	repository := &discussionRepositoryFake{}

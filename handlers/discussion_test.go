@@ -21,7 +21,7 @@ func TestDiscussionHandlerListsPostsValidatesFiltersAndReturnsEmptyList(t *testi
 	repository := &discussionRepositoryFake{}
 	handler := NewDiscussionHandler(repository, time.Second)
 	response := performDiscussionRequest(handler.ListPosts, http.MethodGet, "/api/posts?subject_id=3&author_id=7&page=2&page_size=10", "", 0)
-	if response.Code != http.StatusOK || strings.TrimSpace(response.Body.String()) != `{"items":[],"has_more":false}` || repository.postFilter.SubjectID == nil || repository.postFilter.AuthorID == nil || *repository.postFilter.SubjectID != 3 || *repository.postFilter.AuthorID != 7 || repository.postFilter.Pagination != (database.Pagination{Page: 2, PageSize: 10}) {
+	if response.Code != http.StatusOK || strings.TrimSpace(response.Body.String()) != "[]" || repository.postFilter.SubjectID == nil || repository.postFilter.AuthorID == nil || *repository.postFilter.SubjectID != 3 || *repository.postFilter.AuthorID != 7 || repository.postFilter.Pagination != (database.Pagination{Page: 2, PageSize: 10}) {
 		t.Fatalf("status/body/filter = %d/%s/%#v", response.Code, response.Body.String(), repository.postFilter)
 	}
 
@@ -91,32 +91,6 @@ func TestDiscussionHandlerReactsOnlyForAuthenticatedUserWithValidPayload(t *test
 	}
 }
 
-func TestReactionAfterToggleReportsAddedOrRemovedReaction(t *testing.T) {
-	like := model.ReactionTypeLike
-	dislike := model.ReactionTypeDislike
-
-	cases := []struct {
-		name         string
-		before       reactionCounts
-		after        reactionCounts
-		requested    model.ReactionType
-		wantReaction *model.ReactionType
-	}{
-		{name: "adds like", before: reactionCounts{likes: 2}, after: reactionCounts{likes: 3}, requested: like, wantReaction: &like},
-		{name: "removes like", before: reactionCounts{likes: 3}, after: reactionCounts{likes: 2}, requested: like},
-		{name: "switches to dislike", before: reactionCounts{likes: 3, dislikes: 1}, after: reactionCounts{likes: 2, dislikes: 2}, requested: dislike, wantReaction: &dislike},
-	}
-
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			got := reactionAfterToggle(test.before, test.after, test.requested)
-			if (got == nil) != (test.wantReaction == nil) || (got != nil && *got != *test.wantReaction) {
-				t.Fatalf("reactionAfterToggle() = %v, want %v", got, test.wantReaction)
-			}
-		})
-	}
-}
-
 func TestDiscussionHandlerScopesNotificationsToJWTUser(t *testing.T) {
 	t.Parallel()
 	repository := &discussionRepositoryFake{}
@@ -136,17 +110,6 @@ func TestDiscussionHandlerScopesNotificationsToJWTUser(t *testing.T) {
 	invalid := performDiscussionRequest(handler.ListNotifications, http.MethodGet, "/api/notifications?unread=yes", "", 42)
 	if invalid.Code != http.StatusBadRequest {
 		t.Fatalf("invalid unread status = %d", invalid.Code)
-	}
-}
-
-func TestDiscussionHandlerSeparatesNotificationHistoryAndClearsRead(t *testing.T) {
-	t.Parallel()
-	repository := &discussionRepositoryFake{}
-	handler := NewDiscussionHandler(repository, time.Second)
-	history := performDiscussionRequest(handler.ListNotificationHistory, http.MethodGet, "/api/notifications/history?page=2", "", 42)
-	clear := performDiscussionRequest(handler.HideReadNotifications, http.MethodPatch, "/api/notifications/clear-read", "", 42)
-	if history.Code != http.StatusOK || clear.Code != http.StatusNoContent || repository.notificationUserID != 42 || !repository.notificationFilter.History || repository.notificationFilter.Pagination.Page != 2 || repository.hiddenUserID != 42 {
-		t.Fatalf("history/clear = %d/%d %#v", history.Code, clear.Code, repository)
 	}
 }
 
@@ -224,7 +187,6 @@ type discussionRepositoryFake struct {
 	notificationUserID   int64
 	notificationFilter   database.NotificationFilter
 	markedUserID         int64
-	hiddenUserID         int64
 	listPostsCalls       int
 	err                  error
 }
@@ -286,10 +248,6 @@ func (f *discussionRepositoryFake) ListNotifications(_ context.Context, userID i
 }
 func (f *discussionRepositoryFake) MarkNotificationsRead(_ context.Context, userID int64) error {
 	f.markedUserID = userID
-	return f.err
-}
-func (f *discussionRepositoryFake) HideReadNotifications(_ context.Context, userID int64) error {
-	f.hiddenUserID = userID
 	return f.err
 }
 

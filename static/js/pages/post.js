@@ -7,7 +7,6 @@ import {
 import { criarPainelDeEstado, inicializarKit } from '../utils/dom.js';
 import { criarCartaoDePost } from '../componentes/cartao-post.js';
 import { criarThread, criarComentario as montarComentario } from '../componentes/comentario.js';
-import { ativarAutocompleteDeMencoes } from '../componentes/mencoes.js';
 
 const publicacao = document.querySelector('#publicacao');
 const thread = document.querySelector('#thread');
@@ -16,7 +15,6 @@ const campoResposta = document.querySelector('#nova-resposta');
 const erroResposta = document.querySelector('#erro-resposta');
 const estadoPost = criarPainelDeEstado(document.querySelector('#estado-post'));
 const estadoRespostas = criarPainelDeEstado(document.querySelector('#estado-respostas'));
-ativarAutocompleteDeMencoes(campoResposta);
 
 const idPost = new URLSearchParams(window.location.search).get('id');
 

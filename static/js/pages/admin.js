@@ -55,29 +55,10 @@ function paginacao(alvo, tipo, total) {
     }
 }
 
-function formatarDataCadastro(data) {
-    if (!data) return 'Não informado';
-
-    const dataConvertida = new Date(data);
-    if (Number.isNaN(dataConvertida.getTime())) return 'Não informado';
-
-    return dataConvertida.toLocaleDateString('pt-BR');
-}
-
-function criarDetalhesDoUsuario(usuario) {
-    const detalhes = criarElemento('div', { classe: 'gs-stack' });
-
-    detalhes.append(
-        criarElemento('strong', { texto: usuario.name || 'Nome não informado' }),
-        criarElemento('span', { classe: 'gs-form-hint', texto: `Username: @${usuario.username || 'não informado'}` }),
-        criarElemento('span', { classe: 'gs-form-hint', texto: `E-mail: ${usuario.email || 'Não informado'}` }),
-        criarElemento('span', { classe: 'gs-form-hint', texto: `Ano/turma: ${usuario.id_year ?? 'Não informado'}` }),
-        criarElemento('span', { classe: 'gs-form-hint', texto: `Cadastro: ${formatarDataCadastro(usuario.created_at)}` }),
-        criarElemento('span', { classe: 'gs-form-hint', texto: `Status: ${usuario.is_banned ? 'Banido' : 'Ativo'}` }),
-        criarElemento('span', { classe: 'gs-form-hint', texto: `Administrador: ${usuario.is_admin ? 'Sim' : 'Não'}` })
-    );
-
-    return detalhes;
+function situacaoDoUsuario(usuario) {
+    if (usuario.is_banned) return ' · Banido';
+    if (usuario.is_admin) return ' · Admin';
+    return '';
 }
 
 function renderizarUsuarios(lista, eu) {
@@ -86,7 +67,14 @@ function renderizarUsuarios(lista, eu) {
     lista.forEach((usuario) => {
         const linha = criarElemento('article', { classe: 'gs-list-row admin-user' });
 
-        const info = criarDetalhesDoUsuario(usuario);
+        const info = criarElemento('div');
+        info.append(
+            criarElemento('strong', { texto: usuario.name }),
+            criarElemento('p', {
+                classe: 'gs-form-hint',
+                texto: `@${usuario.username}${situacaoDoUsuario(usuario)}`
+            })
+        );
         linha.append(info);
 
         const protegido = usuario.id === eu.id

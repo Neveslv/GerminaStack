@@ -25,17 +25,11 @@ var usersAdminMigration string
 //go:embed migrations/0007_notify_mentions.sql
 var notifyMentionsMigration string
 
-//go:embed migrations/0005_message_functions_triggers.sql
-var messageFunctionsMigration string
-
 //go:embed migrations/0008_frok_user.sql
 var frokUserMigration string
 
 //go:embed migrations/0009_admin_moderation.sql
 var adminModerationMigration string
-
-//go:embed migrations/0010_notification_visibility.sql
-var notificationVisibilityMigration string
 
 func Migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := db.ExecContext(ctx, coreSchemaMigration); err != nil {
@@ -53,9 +47,6 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	if _, err := db.ExecContext(ctx, academicSeedMigration); err != nil {
 		return fmt.Errorf("apply academic seed migration: %w", err)
 	}
-	if _, err := db.ExecContext(ctx, messageFunctionsMigration); err != nil {
-		return fmt.Errorf("apply message functions migration: %w", err)
-	}
 	if _, err := db.ExecContext(ctx, notifyMentionsMigration); err != nil {
 		return fmt.Errorf("apply notifications migration: %w", err)
 	}
@@ -64,9 +55,6 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 	if _, err := db.ExecContext(ctx, adminModerationMigration); err != nil {
 		return fmt.Errorf("apply moderation migration: %w", err)
-	}
-	if _, err := db.ExecContext(ctx, notificationVisibilityMigration); err != nil {
-		return fmt.Errorf("apply notification visibility migration: %w", err)
 	}
 	return nil
 }

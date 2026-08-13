@@ -18,33 +18,6 @@ var (
 
 type PostgresAccountRepository struct{ db *sql.DB }
 
-func (r *PostgresAccountRepository) ListMentionUsers(ctx context.Context, prefix string) ([]model.User, error) {
-	const query = `SELECT id, name, username, profile_image_url, profile_image_description
-FROM users
-WHERE username ILIKE $1 || '%'
-ORDER BY username
-LIMIT 8`
-
-	rows, err := r.db.QueryContext(ctx, query, prefix)
-	if err != nil {
-		return nil, fmt.Errorf("list mention users: %w", err)
-	}
-	defer rows.Close()
-
-	users := make([]model.User, 0)
-	for rows.Next() {
-		var user model.User
-		if err := rows.Scan(&user.ID, &user.Name, &user.Username, &user.ProfileImageURL, &user.ProfileImageDescription); err != nil {
-			return nil, fmt.Errorf("scan mention user: %w", err)
-		}
-		users = append(users, user)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate mention users: %w", err)
-	}
-	return users, nil
-}
-
 func NewPostgresAccountRepository(db *sql.DB) *PostgresAccountRepository {
 	return &PostgresAccountRepository{db: db}
 }

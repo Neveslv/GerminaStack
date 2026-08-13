@@ -25,7 +25,5 @@ func RegisterDiscussionRoutes(api *gin.RouterGroup, discussion *handlers.Discuss
 	routes.PUT("/comments/:id/reaction", discussion.React("comment"))
 	routes.PUT("/replies/:id/reaction", discussion.React("comment_on_comment"))
 	routes.GET("/notifications", discussion.ListNotifications)
-	routes.GET("/notifications/history", discussion.ListNotificationHistory)
 	routes.PATCH("/notifications/read-all", discussion.MarkNotificationsRead)
-	routes.PATCH("/notifications/clear-read", discussion.HideReadNotifications)
 }

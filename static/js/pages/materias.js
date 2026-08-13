@@ -128,7 +128,7 @@ async function renderizarPublicacoes() {
             `${posts.length} ${posts.length === 1 ? 'publicação' : 'publicações'} em ${nome}.`
         );
     } catch (erro) {
-        estadoPublicacoes.erro(erro.message, 'Recarregue a página para tentar de novo.');
+        estadoPublicacoes.erro(erro.message, 'Tentar novamente', renderizarPublicacoes);
     }
 }
 
@@ -145,7 +145,7 @@ carregarMais.addEventListener('click', async () => {
         carregarMais.textContent = haMaisMateria ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
         inicializarKit(listaPublicacoes);
     } catch (erro) {
-        estadoPublicacoes.erro(erro.message, 'Tentar novamente');
+        estadoPublicacoes.erro(erro.message, 'Tentar novamente', () => carregarMais.click());
     } finally {
         carregandoMateria = false;
     }
@@ -195,7 +195,7 @@ async function carregarPagina() {
         renderizarMaterias();
         renderizarPublicacoes();
     } catch (erro) {
-        estadoMaterias.erro(erro.message, 'Recarregue a página para tentar de novo.');
+        estadoMaterias.erro(erro.message, 'Tentar novamente', carregarPagina);
         estadoPublicacoes.ocultar();
     }
 }

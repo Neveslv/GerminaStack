@@ -98,13 +98,23 @@ async function renderizarFeed() {
 }
 
 async function carregarPosts(silencioso = false) {
+    if (silencioso && carregandoMais) return;
     if (!silencioso) estado.carregando('Carregando publicações…');
 
     try {
-        paginaAtual = 1;
-        const pagina = await listarPosts({ idSubject: filtros.idSubject, page: paginaAtual });
-        postsCarregados = pagina.items;
-        haMaisPosts = pagina.has_more;
+        const pagina = await listarPosts({ idSubject: filtros.idSubject, page: 1 });
+        if (silencioso) {
+            const postsAtualizados = new Map(pagina.items.map((post) => [post.id, post]));
+            postsCarregados.forEach((post) => {
+                if (!postsAtualizados.has(post.id)) postsAtualizados.set(post.id, post);
+            });
+            postsCarregados = [...postsAtualizados.values()];
+            haMaisPosts = pagina.has_more || (paginaAtual > 1 && haMaisPosts);
+        } else {
+            paginaAtual = 1;
+            postsCarregados = pagina.items;
+            haMaisPosts = pagina.has_more;
+        }
         if (carregarMais) carregarMais.hidden = !haMaisPosts;
         if (carregarMais) carregarMais.textContent = haMaisPosts ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
         if (!filtros.idSubject) renderizarTrending(postsCarregados);
@@ -112,7 +122,7 @@ async function carregarPosts(silencioso = false) {
     } catch (erro) {
         if (silencioso) return;
         feed.replaceChildren();
-        estado.erro(erro.message, 'Recarregue a página para tentar de novo.');
+        estado.erro(erro.message, 'Tentar novamente', () => carregarPosts());
     }
 }
 
@@ -129,7 +139,7 @@ async function carregarMaisPosts() {
         if (carregarMais) carregarMais.textContent = haMaisPosts ? 'Carregar mais' : 'Todas as publicaÃ§Ãµes foram carregadas';
         await renderizarFeed();
     } catch (erro) {
-        estado.erro(erro.message, 'Tentar novamente');
+        estado.erro(erro.message, 'Tentar novamente', carregarMaisPosts);
     } finally {
         carregandoMais = false;
     }

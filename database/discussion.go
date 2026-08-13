@@ -6,34 +6,19 @@ import (
 	"errors"
 	"fmt"
 
+	"germinaStack/domain/discussion"
 	"germinaStack/model"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-var ErrDiscussionNotFound = errors.New("discussion item not found")
-var ErrDiscussionInvalid = errors.New("invalid discussion item")
+var ErrDiscussionNotFound = discussion.ErrNotFound
+var ErrDiscussionInvalid = discussion.ErrInvalid
 
-type PostInput struct {
-	SubjectID        int64
-	Title            string
-	ImageURL         *string
-	ImageDescription *string
-	Content          string
-}
-
-type CommentInput struct{ Content string }
-
-type PostFilter struct {
-	SubjectID  *int64
-	AuthorID   *int64
-	Pagination Pagination
-}
-
-type NotificationFilter struct {
-	Unread     bool
-	Pagination Pagination
-}
+type PostInput = discussion.PostInput
+type CommentInput = discussion.CommentInput
+type PostFilter = discussion.PostFilter
+type NotificationFilter = discussion.NotificationFilter
 
 type PostgresDiscussionRepository struct{ db *sql.DB }
 

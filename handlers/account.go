@@ -8,19 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"germinaStack/database"
+	"germinaStack/domain/account"
 	"germinaStack/model"
 
 	"github.com/gin-gonic/gin"
 )
-
-type AccountRepository interface {
-	GetProfile(context.Context, int64) (model.User, error)
-	GetPublicProfile(context.Context, string) (model.User, error)
-	UpdateProfile(context.Context, int64, model.User) (model.User, error)
-	GetPreferences(context.Context, int64) (model.Preference, error)
-	UpsertPreferences(context.Context, int64, model.Preference) (model.Preference, error)
-}
 
 type publicProfileResponse struct {
 	ID                      int64      `json:"id"`
@@ -33,11 +25,11 @@ type publicProfileResponse struct {
 }
 
 type AccountHandler struct {
-	repository       AccountRepository
+	repository       account.Repository
 	operationTimeout time.Duration
 }
 
-func NewAccountHandler(repository AccountRepository, operationTimeout time.Duration) *AccountHandler {
+func NewAccountHandler(repository account.Repository, operationTimeout time.Duration) *AccountHandler {
 	return &AccountHandler{repository: repository, operationTimeout: operationTimeout}
 }
 
@@ -109,7 +101,7 @@ func (h *AccountHandler) GetPreferences(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
 	preference, err := h.repository.GetPreferences(ctx, userID)
-	if errors.Is(err, database.ErrPreferencesNotFound) {
+	if errors.Is(err, account.ErrPreferencesNotFound) {
 		c.JSON(http.StatusOK, model.Preference{UserID: userID})
 		return
 	}
@@ -128,7 +120,7 @@ func (h *AccountHandler) UpdatePreferences(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
 	preference, err := h.repository.GetPreferences(ctx, userID)
-	if errors.Is(err, database.ErrPreferencesNotFound) {
+	if errors.Is(err, account.ErrPreferencesNotFound) {
 		preference = model.Preference{UserID: userID}
 	} else if err != nil {
 		writeAccountError(c, err)
@@ -256,7 +248,7 @@ func optionalString(raw json.RawMessage, allowNull bool) (*string, bool) {
 }
 
 func writeAccountError(c *gin.Context, err error) {
-	if errors.Is(err, database.ErrAccountNotFound) || errors.Is(err, database.ErrPreferencesNotFound) {
+	if errors.Is(err, account.ErrNotFound) || errors.Is(err, account.ErrPreferencesNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "recurso não encontrado"})
 		return
 	}

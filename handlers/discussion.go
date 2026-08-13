@@ -11,41 +11,21 @@ import (
 	"time"
 
 	"germinaStack/auth"
-	"germinaStack/database"
+	"germinaStack/domain/discussion"
+	"germinaStack/domain/pagination"
 	"germinaStack/frok"
 	"germinaStack/model"
 
 	"github.com/gin-gonic/gin"
 )
 
-type DiscussionRepository interface {
-	GetPost(context.Context, int64) (model.Post, error)
-	CreatePost(context.Context, int64, database.PostInput) (model.Post, error)
-	UpdatePost(context.Context, int64, database.PostInput) (model.Post, error)
-	DeletePost(context.Context, int64) error
-	GetComment(context.Context, int64) (model.Comment, error)
-	CreateComment(context.Context, int64, int64, database.CommentInput) (model.Comment, error)
-	UpdateComment(context.Context, int64, database.CommentInput) (model.Comment, error)
-	DeleteComment(context.Context, int64) error
-	GetReply(context.Context, int64) (model.CommentOnComment, error)
-	CreateReply(context.Context, int64, int64, database.CommentInput) (model.CommentOnComment, error)
-	UpdateReply(context.Context, int64, database.CommentInput) (model.CommentOnComment, error)
-	DeleteReply(context.Context, int64) error
-	ListPosts(context.Context, database.PostFilter) ([]model.Post, error)
-	ListComments(context.Context, int64, database.Pagination) ([]model.Comment, error)
-	ListReplies(context.Context, int64, database.Pagination) ([]model.CommentOnComment, error)
-	React(context.Context, int64, int64, string, model.ReactionType) error
-	ListNotifications(context.Context, int64, database.NotificationFilter) ([]model.Notification, error)
-	MarkNotificationsRead(context.Context, int64) error
-}
-
 type DiscussionHandler struct {
-	repository       DiscussionRepository
+	repository       discussion.Repository
 	operationTimeout time.Duration
 	frok             *frok.Service
 }
 
-func NewDiscussionHandler(repository DiscussionRepository, operationTimeout time.Duration, assistants ...*frok.Service) *DiscussionHandler {
+func NewDiscussionHandler(repository discussion.Repository, operationTimeout time.Duration, assistants ...*frok.Service) *DiscussionHandler {
 	handler := &DiscussionHandler{repository: repository, operationTimeout: operationTimeout}
 	if len(assistants) > 0 {
 		handler.frok = assistants[0]
@@ -301,7 +281,7 @@ func (h *DiscussionHandler) ListPosts(c *gin.Context) {
 	if !ok {
 		return
 	}
-	filter := database.PostFilter{Pagination: pagination}
+	filter := discussion.PostFilter{Pagination: pagination}
 	if filter.SubjectID, ok = discussionQueryID(query, "subject_id"); !ok {
 		writeInvalidDiscussionRequest(c)
 		return
@@ -323,21 +303,21 @@ func (h *DiscussionHandler) ListPosts(c *gin.Context) {
 	c.JSON(http.StatusOK, posts)
 }
 
-func decodePostInput(c *gin.Context, existing *model.Post, requireCore bool) (database.PostInput, bool) {
-	input := database.PostInput{}
+func decodePostInput(c *gin.Context, existing *model.Post, requireCore bool) (discussion.PostInput, bool) {
+	input := discussion.PostInput{}
 	if existing != nil {
-		input = database.PostInput{SubjectID: existing.SubjectID, Title: existing.Title, ImageURL: existing.ImageURL, ImageDescription: existing.ImageDescription, Content: existing.Content}
+		input = discussion.PostInput{SubjectID: existing.SubjectID, Title: existing.Title, ImageURL: existing.ImageURL, ImageDescription: existing.ImageDescription, Content: existing.Content}
 	}
 	fields, ok := decodeObject(c)
 	if !ok {
 		writeInvalidDiscussionRequest(c)
-		return database.PostInput{}, false
+		return discussion.PostInput{}, false
 	}
 	if requireCore {
 		for _, key := range []string{"subject_id", "title", "content"} {
 			if _, exists := fields[key]; !exists {
 				writeInvalidDiscussionRequest(c)
-				return database.PostInput{}, false
+				return discussion.PostInput{}, false
 			}
 		}
 	}
@@ -347,66 +327,66 @@ func decodePostInput(c *gin.Context, existing *model.Post, requireCore bool) (da
 			var subjectID int64
 			if json.Unmarshal(raw, &subjectID) != nil || subjectID <= 0 {
 				writeInvalidDiscussionRequest(c)
-				return database.PostInput{}, false
+				return discussion.PostInput{}, false
 			}
 			input.SubjectID = subjectID
 		case "title":
 			value, valid := optionalString(raw, false)
 			if !valid || value == nil || strings.TrimSpace(*value) == "" || len([]byte(*value)) > 200 {
 				writeInvalidDiscussionRequest(c)
-				return database.PostInput{}, false
+				return discussion.PostInput{}, false
 			}
 			input.Title = strings.TrimSpace(*value)
 		case "content":
 			value, valid := optionalString(raw, false)
 			if !valid || value == nil || strings.TrimSpace(*value) == "" || len([]byte(*value)) > 10000 {
 				writeInvalidDiscussionRequest(c)
-				return database.PostInput{}, false
+				return discussion.PostInput{}, false
 			}
 			input.Content = strings.TrimSpace(*value)
 		case "image_url":
 			value, valid := optionalString(raw, true)
 			if !valid {
 				writeInvalidDiscussionRequest(c)
-				return database.PostInput{}, false
+				return discussion.PostInput{}, false
 			}
 			input.ImageURL = value
 		case "image_description":
 			value, valid := optionalString(raw, true)
 			if !valid {
 				writeInvalidDiscussionRequest(c)
-				return database.PostInput{}, false
+				return discussion.PostInput{}, false
 			}
 			input.ImageDescription = value
 		default:
 			writeInvalidDiscussionRequest(c)
-			return database.PostInput{}, false
+			return discussion.PostInput{}, false
 		}
 	}
 	if input.SubjectID <= 0 || strings.TrimSpace(input.Title) == "" || strings.TrimSpace(input.Content) == "" || (input.ImageURL == nil) != (input.ImageDescription == nil) {
 		writeInvalidDiscussionRequest(c)
-		return database.PostInput{}, false
+		return discussion.PostInput{}, false
 	}
 	return input, true
 }
 
-func decodeCommentInput(c *gin.Context) (database.CommentInput, bool) {
+func decodeCommentInput(c *gin.Context) (discussion.CommentInput, bool) {
 	fields, ok := decodeObject(c)
 	if !ok || len(fields) != 1 {
 		writeInvalidDiscussionRequest(c)
-		return database.CommentInput{}, false
+		return discussion.CommentInput{}, false
 	}
 	raw, exists := fields["content"]
 	if !exists {
 		writeInvalidDiscussionRequest(c)
-		return database.CommentInput{}, false
+		return discussion.CommentInput{}, false
 	}
 	value, valid := optionalString(raw, false)
 	if !valid || value == nil || strings.TrimSpace(*value) == "" || len([]byte(*value)) > 10000 {
 		writeInvalidDiscussionRequest(c)
-		return database.CommentInput{}, false
+		return discussion.CommentInput{}, false
 	}
-	return database.CommentInput{Content: strings.TrimSpace(*value)}, true
+	return discussion.CommentInput{Content: strings.TrimSpace(*value)}, true
 }
 
 func canMutateDiscussion(c *gin.Context, authorID int64) bool {
@@ -542,7 +522,7 @@ func (h *DiscussionHandler) ListNotifications(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
-	notifications, err := h.repository.ListNotifications(ctx, userID, database.NotificationFilter{Unread: unread, Pagination: pagination})
+	notifications, err := h.repository.ListNotifications(ctx, userID, discussion.NotificationFilter{Unread: unread, Pagination: pagination})
 	if err != nil {
 		writeDiscussionError(c, err)
 		return
@@ -568,11 +548,11 @@ func (h *DiscussionHandler) MarkNotificationsRead(c *gin.Context) {
 	c.Writer.WriteHeaderNow()
 }
 
-func discussionQuery(c *gin.Context, allowed ...string) (url.Values, database.Pagination, bool) {
+func discussionQuery(c *gin.Context, allowed ...string) (url.Values, pagination.Pagination, bool) {
 	query, err := url.ParseQuery(c.Request.URL.RawQuery)
 	if err != nil {
 		writeInvalidDiscussionRequest(c)
-		return nil, database.Pagination{}, false
+		return nil, pagination.Pagination{}, false
 	}
 	for key := range query {
 		if key == "page" || key == "page_size" {
@@ -587,21 +567,21 @@ func discussionQuery(c *gin.Context, allowed ...string) (url.Values, database.Pa
 		}
 		if !valid || len(query[key]) != 1 || query[key][0] == "" {
 			writeInvalidDiscussionRequest(c)
-			return nil, database.Pagination{}, false
+			return nil, pagination.Pagination{}, false
 		}
 	}
 	for _, key := range []string{"page", "page_size"} {
 		if values, supplied := query[key]; supplied && (len(values) != 1 || values[0] == "") {
 			writeInvalidDiscussionRequest(c)
-			return nil, database.Pagination{}, false
+			return nil, pagination.Pagination{}, false
 		}
 	}
-	pagination, err := database.ParsePagination(query.Get("page"), query.Get("page_size"))
+	page, err := pagination.Parse(query.Get("page"), query.Get("page_size"))
 	if err != nil {
 		writeInvalidDiscussionRequest(c)
-		return nil, database.Pagination{}, false
+		return nil, pagination.Pagination{}, false
 	}
-	return query, pagination, true
+	return query, page, true
 }
 
 func discussionQueryID(query url.Values, key string) (*int64, bool) {
@@ -645,11 +625,11 @@ func discussionUserID(c *gin.Context) (int64, bool) {
 }
 
 func writeDiscussionError(c *gin.Context, err error) {
-	if errors.Is(err, database.ErrDiscussionNotFound) {
+	if errors.Is(err, discussion.ErrNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "recurso não encontrado"})
 		return
 	}
-	if errors.Is(err, database.ErrDiscussionInvalid) {
+	if errors.Is(err, discussion.ErrInvalid) {
 		writeInvalidDiscussionRequest(c)
 		return
 	}

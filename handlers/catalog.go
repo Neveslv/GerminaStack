@@ -6,22 +6,18 @@ import (
 	"time"
 
 	"germinaStack/auth"
+	"germinaStack/domain/catalog"
 	"germinaStack/model"
 
 	"github.com/gin-gonic/gin"
 )
 
-type CatalogRepository interface {
-	ListYears(context.Context) ([]model.Year, error)
-	ListSubjects(context.Context, int64) ([]model.Subject, error)
-}
-
 type CatalogHandler struct {
-	repository       CatalogRepository
+	repository       catalog.Repository
 	operationTimeout time.Duration
 }
 
-func NewCatalogHandler(repository CatalogRepository, operationTimeout time.Duration) *CatalogHandler {
+func NewCatalogHandler(repository catalog.Repository, operationTimeout time.Duration) *CatalogHandler {
 	return &CatalogHandler{repository: repository, operationTimeout: operationTimeout}
 }
 

@@ -7,26 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	domainauth "germinaStack/domain/auth"
 )
 
 var (
-	ErrChallengeNotFound = errors.New("challenge not found")
-	ErrChallengeUsed     = errors.New("challenge already used")
-	ErrChallengeExpired  = errors.New("challenge expired")
-	ErrInvalidCode       = errors.New("invalid authentication code")
-	ErrTooManyAttempts   = errors.New("too many authentication attempts")
+	ErrChallengeNotFound = domainauth.ErrChallengeNotFound
+	ErrChallengeUsed     = domainauth.ErrChallengeUsed
+	ErrChallengeExpired  = domainauth.ErrChallengeExpired
+	ErrInvalidCode       = domainauth.ErrInvalidCode
+	ErrTooManyAttempts   = domainauth.ErrTooManyAttempts
 )
 
-type Challenge struct {
-	ID          string
-	UserID      int64
-	CodeHash    []byte
-	ExpiresAt   time.Time
-	Attempts    int
-	MaxAttempts int
-	UsedAt      *time.Time
-	CreatedAt   time.Time
-}
+type Challenge = domainauth.Challenge
 
 type PostgresChallengeRepository struct {
 	db *sql.DB

@@ -6,40 +6,21 @@ import (
 	"errors"
 	"fmt"
 
+	domainauth "germinaStack/domain/auth"
+	"germinaStack/domain/users"
+
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var (
-	ErrCredentialNotFound = errors.New("credential not found")
-	ErrCredentialConflict = errors.New("credential already exists")
-	ErrYearNotFound       = errors.New("year not found")
+	ErrCredentialNotFound = domainauth.ErrCredentialNotFound
+	ErrCredentialConflict = users.ErrCredentialConflict
+	ErrYearNotFound       = users.ErrYearNotFound
 )
 
-type Credential struct {
-	ID           int64
-	Username     string
-	Email        string
-	PasswordHash string
-	IsAdmin      bool
-	IsBanned     bool
-}
-
-type UserRegistration struct {
-	YearID       int64
-	Name         string
-	Username     string
-	Email        string
-	PasswordHash string
-}
-
-type User struct {
-	ID       int64
-	YearID   int64
-	Name     string
-	Username string
-	Email    string
-	IsAdmin  bool
-}
+type Credential = domainauth.Credential
+type UserRegistration = users.Registration
+type User = users.Credential
 type PostgresCredentialRepository struct {
 	db *sql.DB
 }

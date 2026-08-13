@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"germinaStack/database"
+	domainauth "germinaStack/domain/auth"
 )
 
 const (
@@ -27,20 +27,9 @@ var (
 	ErrUnavailable        = errors.New("serviço temporariamente indisponível")
 )
 
-type CredentialRepository interface {
-	FindByEmail(context.Context, string) (database.Credential, error)
-	FindByID(context.Context, int64) (database.Credential, error)
-}
-
 type Principal struct {
 	ID      int64
 	IsAdmin bool
-}
-
-type ChallengeRepository interface {
-	Create(context.Context, database.Challenge) error
-	VerifyAndConsume(context.Context, string, []byte, time.Time) (int64, error)
-	Invalidate(context.Context, string, time.Time) error
 }
 
 type MailSender interface {
@@ -52,14 +41,14 @@ type Clock interface {
 }
 
 type Service struct {
-	credentials CredentialRepository
-	challenges  ChallengeRepository
+	credentials domainauth.CredentialRepository
+	challenges  domainauth.ChallengeRepository
 	mailer      MailSender
 	secret      []byte
 	clock       Clock
 }
 
-func NewService(credentials CredentialRepository, challenges ChallengeRepository, mailer MailSender, secret []byte, clock Clock) *Service {
+func NewService(credentials domainauth.CredentialRepository, challenges domainauth.ChallengeRepository, mailer MailSender, secret []byte, clock Clock) *Service {
 	return &Service{
 		credentials: credentials,
 		challenges:  challenges,
@@ -75,7 +64,7 @@ func (s *Service) StartLogin(ctx context.Context, email, password string) (strin
 	}
 
 	credential, err := s.credentials.FindByEmail(ctx, email)
-	if errors.Is(err, database.ErrCredentialNotFound) {
+	if errors.Is(err, domainauth.ErrCredentialNotFound) {
 		_ = CheckPassword(dummyPasswordHash(), password)
 		return "", ErrInvalidCredentials
 	}
@@ -95,7 +84,7 @@ func (s *Service) StartLogin(ctx context.Context, email, password string) (strin
 		return "", ErrUnavailable
 	}
 	now := s.clock.Now().UTC()
-	challenge := database.Challenge{
+	challenge := domainauth.Challenge{
 		ID:          challengeID,
 		UserID:      credential.ID,
 		CodeHash:    HashCode(s.secret, challengeID, code),
@@ -156,13 +145,13 @@ func (s *Service) CompleteLogin(ctx context.Context, challengeID, code string) (
 			return Principal{}, ErrInvalidCredentials
 		}
 		return Principal{ID: credential.ID, IsAdmin: credential.IsAdmin}, nil
-	case errors.Is(err, database.ErrInvalidCode), errors.Is(err, database.ErrChallengeNotFound):
+	case errors.Is(err, domainauth.ErrInvalidCode), errors.Is(err, domainauth.ErrChallengeNotFound):
 		return Principal{}, ErrInvalidCode
-	case errors.Is(err, database.ErrChallengeExpired):
+	case errors.Is(err, domainauth.ErrChallengeExpired):
 		return Principal{}, ErrChallengeExpired
-	case errors.Is(err, database.ErrChallengeUsed):
+	case errors.Is(err, domainauth.ErrChallengeUsed):
 		return Principal{}, ErrChallengeUsed
-	case errors.Is(err, database.ErrTooManyAttempts):
+	case errors.Is(err, domainauth.ErrTooManyAttempts):
 		return Principal{}, ErrTooManyAttempts
 	default:
 		return Principal{}, ErrUnavailable

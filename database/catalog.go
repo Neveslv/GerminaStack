@@ -41,10 +41,7 @@ func (r *PostgresCatalogRepository) ListYears(ctx context.Context) ([]model.Year
 }
 
 func (r *PostgresCatalogRepository) ListSubjects(ctx context.Context, userID int64) ([]model.Subject, error) {
-	const query = `SELECT s.id, s.id_year, s.subject, s.created_at, COUNT(p.id) AS posts_count
-FROM subjects s LEFT JOIN posts p ON p.id_subject = s.id
-WHERE s.id_year = (SELECT id_year FROM users WHERE id = $1) OR (s.id_year IS NULL AND s.subject = 'Geral')
-GROUP BY s.id, s.id_year, s.subject, s.created_at ORDER BY s.subject, s.id`
+	const query = `SELECT id, id_year, subject, created_at FROM subjects WHERE id_year = (SELECT id_year FROM users WHERE id = $1) OR (id_year IS NULL AND subject = 'Geral') ORDER BY subject, id`
 	rows, err := r.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list subjects: %w", err)
@@ -54,7 +51,7 @@ GROUP BY s.id, s.id_year, s.subject, s.created_at ORDER BY s.subject, s.id`
 	subjects := make([]model.Subject, 0)
 	for rows.Next() {
 		var subject model.Subject
-		if err := rows.Scan(&subject.ID, &subject.YearID, &subject.Subject, &subject.CreatedAt, &subject.PostsCount); err != nil {
+		if err := rows.Scan(&subject.ID, &subject.YearID, &subject.Subject, &subject.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan subject: %w", err)
 		}
 		subjects = append(subjects, subject)

@@ -54,20 +54,14 @@ async function requisitar(caminho, opcoes = {}) {
     }
 }
 
-export async function listarPosts({ idSubject, page = 1, pageSize = 20 } = {}) {
-    const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-    if (idSubject) params.set('subject_id', String(idSubject));
-    const [resposta, materias, usuario] = await Promise.all([
-        requisitar(`/api/posts?${params}`),
+export async function listarPosts({ idSubject } = {}) {
+    const query = idSubject ? `?subject_id=${idSubject}` : '';
+    const [posts, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts${query}`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    const pagina = normalizarPaginaDePosts(resposta);
-    const items = await Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario)));
-
-    // Mantém compatibilidade com telas/cache que ainda esperam um array,
-    // sem perder os metadados usados pela paginação nova.
-    return Object.assign(items, { items, has_more: pagina.has_more });
+    return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
 }
 
 export async function listarMaterias() {
@@ -134,11 +128,6 @@ export async function buscarUsuario(username) {
     return { ...usuario, year: anos.find((ano) => ano.id === usuario.id_year) };
 }
 
-export async function buscarSugestoesDeUsuario(prefixo) {
-    const resposta = await requisitar(`/api/users/mentions?q=${encodeURIComponent(prefixo)}`);
-    return Array.isArray(resposta) ? resposta : (Array.isArray(resposta.items) ? resposta.items : []);
-}
-
 export async function salvarPerfil(dados) {
     return requisitar('/api/me', {
         method: 'PATCH',
@@ -146,20 +135,31 @@ export async function salvarPerfil(dados) {
     });
 }
 
-export async function listarUsuariosAdmin({ page = 1, q = '' } = {}) { return requisitar(`/api/admin/users?page=${page}&q=${encodeURIComponent(q)}`); }
-export async function listarPostsAdmin({ page = 1, q = '' } = {}) { return requisitar(`/api/admin/posts?page=${page}&q=${encodeURIComponent(q)}`); }
-export async function banirUsuario(id, enabled = true) { return requisitar(`/api/admin/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
-export async function definirAdmin(id, enabled) { return requisitar(`/api/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); }
-export async function excluirPost(id) { return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); }
+export async function listarUsuariosAdmin({ page = 1, q = '' } = {}) {
+    return requisitar(`/api/admin/users?page=${page}&q=${encodeURIComponent(q)}`);
+}
+
+export async function listarPostsAdmin({ page = 1, q = '' } = {}) {
+    return requisitar(`/api/admin/posts?page=${page}&q=${encodeURIComponent(q)}`);
+}
+export async function banirUsuario(id, enabled = true) { 
+    return requisitar(`/api/admin/users/${id}/ban`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); 
+}
+export async function definirAdmin(id, enabled) { 
+    return requisitar(`/api/admin/users/${id}/admin`, { method: 'PATCH', body: JSON.stringify({ enabled }) }); 
+}
+
+export async function excluirPost(id) { 
+    return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); 
+}
 
 export async function listarPostsDoAutor(idAutor) {
-    const [resposta, materias, usuario] = await Promise.all([
-        requisitar(`/api/posts?author_id=${idAutor}&page=1&page_size=100`),
+    const [posts, materias, usuario] = await Promise.all([
+        requisitar(`/api/posts?author_id=${idAutor}`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    const pagina = normalizarPaginaDePosts(resposta);
-    return Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario)));
+    return Promise.all(posts.map((post) => normalizarPost(post, materias, usuario)));
 }
 
 
@@ -167,43 +167,30 @@ export async function listarNotificacoes() {
     return requisitar('/api/notifications');
 }
 
-export async function listarHistoricoNotificacoes({ page = 1, pageSize = 20 } = {}) {
-    const todas = [];
-    let pagina = page;
-    while (true) {
-        const itens = await requisitar(`/api/notifications/history?page=${pagina}&page_size=${pageSize}`);
-        todas.push(...itens);
-        if (itens.length < pageSize) return todas;
-        pagina += 1;
-    }
-}
-
 export async function marcarNotificacoesComoLidas() {
     return requisitar('/api/notifications/read-all', { method: 'PATCH' });
 }
 
-export async function limparNotificacoesLidas() {
-    return requisitar('/api/notifications/clear-read', { method: 'PATCH' });
-}
-
 export async function reagir({ tipo, id, reacao }) {
     const recurso = { post: 'posts', comment: 'comments', comment_on_comment: 'replies' }[tipo];
+    const chave = `${tipo}:${id}`;
+    const anterior = reacoesDaSessao.get(chave) ?? null;
     const atualizado = await requisitar(`/api/${recurso}/${id}/reaction`, {
         method: 'PUT',
         body: JSON.stringify({ reaction_type: reacao })
     });
+    const atual = anterior === reacao ? null : reacao;
+    reacoesDaSessao.set(chave, atual);
     return {
-		reacao: atualizado.reacao ?? null,
-		likes: atualizado.likes,
-		dislikes: atualizado.dislikes,
-		absolutos: true
+        reacao: atual,
+        likes: atualizado.likes,
+        dislikes: atualizado.dislikes,
+        absolutos: true
     };
 }
 
 export async function buscarMinhaReacao(tipo, id) {
-    const recurso = { post: 'post', comment: 'comment', comment_on_comment: 'comment_on_comment' }[tipo];
-    const reacao = await requisitar(`/api/reactions?message_type=${recurso}&id_message=${id}`);
-    return reacao ?? null;
+    return reacoesDaSessao.get(`${tipo}:${id}`) ?? null;
 }
 
 export async function criarComentario({ tipo, idPai, content }) {
@@ -227,6 +214,7 @@ export async function salvarPreferencias(preferencias) {
 }
 
 let perfilAtual;
+const reacoesDaSessao = new Map();
 const perfisPublicos = new Map();
 
 export async function buscarMeuPerfil() {
@@ -238,18 +226,8 @@ export async function buscarMeuPerfil() {
 }
 
 function normalizarAutor(id, usuario, name, username, imageUrl, imageDescription) {
-	if (id === usuario.id) return usuario;
-	return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
-}
-
-function normalizarPaginaDePosts(resposta) {
-    if (Array.isArray(resposta)) {
-        return { items: resposta, has_more: false };
-    }
-    return {
-        items: Array.isArray(resposta?.items) ? resposta.items : [],
-        has_more: resposta?.has_more === true
-    };
+    if (id === usuario.id) return usuario;
+    return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
 }
 
 function normalizarMensagem(item, usuario) {

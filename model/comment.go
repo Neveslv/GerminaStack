@@ -1,10 +1,6 @@
 package model
 
-import (
-	"errors"
-	"strings"
-	"time"
-)
+import "time"
 
 type Comment struct {
 	ID             int64      `db:"id" json:"id"`
@@ -16,11 +12,4 @@ type Comment struct {
 	AuthorName     string     `db:"author_name" json:"author_name"`
 	AuthorUsername string     `db:"author_username" json:"author_username"`
 	CreatedAt      *time.Time `db:"created_at" json:"created_at"`
-}
-
-func (comment Comment) ValidateForCreate() error {
-	if comment.UserID <= 0 || comment.PostID <= 0 || strings.TrimSpace(comment.Content) == "" {
-		return errors.New("comentário inválido")
-	}
-	return nil
 }

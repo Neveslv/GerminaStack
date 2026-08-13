@@ -106,30 +106,11 @@ func (f *accountRepositoryFake) UpsertPreferences(_ context.Context, userID int6
 	return preference, nil
 }
 
-func performAccountRequest(handler gin.HandlerFunc, method, path, body string, values ...any) *httptest.ResponseRecorder {
-	userID := int64(0)
-	isAdmin := false
-	authenticated := false
-	if len(values) == 1 {
-		switch value := values[0].(type) {
-		case int:
-			userID = int64(value)
-		case int64:
-			userID = value
-		}
-		authenticated = userID > 0
-	} else if len(values) >= 2 {
-		isAdmin, _ = values[0].(bool)
-		authenticated, _ = values[1].(bool)
-		if authenticated {
-			userID = 42
-		}
-	}
+func performAccountRequest(handler gin.HandlerFunc, method, path, body string, userID int64) *httptest.ResponseRecorder {
 	router := gin.New()
 	router.Handle(method, path, func(c *gin.Context) {
-		if authenticated {
+		if userID > 0 {
 			c.Set(auth.ContextUserID, userID)
-			c.Set(auth.ContextIsAdmin, isAdmin)
 		}
 		handler(c)
 	})

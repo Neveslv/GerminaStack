@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"strings"
 	"time"
 )
 
@@ -24,22 +23,10 @@ type Post struct {
 	CreatedAt              *time.Time `db:"created_at" json:"created_at"`
 }
 
-type PostPage struct {
-	Items   []Post `json:"items"`
-	HasMore bool   `json:"has_more"`
-}
-
 func (post Post) Validate() error {
 	if (post.ImageURL == nil) != (post.ImageDescription == nil) {
 		return errors.New("imagem do post e descrição devem ser informadas juntas")
 	}
 
 	return nil
-}
-
-func (post Post) ValidateForCreate() error {
-	if post.UserID <= 0 || post.SubjectID <= 0 || strings.TrimSpace(post.Title) == "" || strings.TrimSpace(post.Content) == "" {
-		return errors.New("post inválido")
-	}
-	return post.Validate()
 }

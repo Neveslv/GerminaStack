@@ -8,7 +8,6 @@ import (
 
 func RegisterAccountRoutes(api *gin.RouterGroup, account *handlers.AccountHandler, authenticated gin.HandlerFunc) {
 	routes := api.Group("", authenticated)
-	routes.GET("/users/mentions", account.ListMentionUsers)
 	routes.GET("/users/:username", account.GetPublicProfile)
 	routes.GET("/me", account.GetProfile)
 	routes.PATCH("/me", account.UpdateProfile)

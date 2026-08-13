@@ -32,7 +32,6 @@ type PostFilter struct {
 
 type NotificationFilter struct {
 	Unread     bool
-	History    bool
 	Pagination Pagination
 }
 
@@ -155,7 +154,7 @@ FROM posts p JOIN users u ON u.id = p.id_user`
 		args = append(args, *filter.AuthorID)
 	}
 	query += fmt.Sprintf(` ORDER BY p.created_at DESC, p.id DESC LIMIT $%d OFFSET $%d`, len(args)+1, len(args)+2)
-	args = append(args, filter.Pagination.PageSize+1, pageOffset(filter.Pagination))
+	args = append(args, filter.Pagination.PageSize, pageOffset(filter.Pagination))
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -232,13 +231,10 @@ func (r *PostgresDiscussionRepository) React(ctx context.Context, userID, messag
 }
 
 func (r *PostgresDiscussionRepository) ListNotifications(ctx context.Context, userID int64, filter NotificationFilter) ([]model.Notification, error) {
-	query := `SELECT id, id_post, id_user, text_show, is_read, is_hidden, created_at
+	query := `SELECT id, id_post, id_user, text_show, is_read, created_at
 FROM notifications
 WHERE id_user = $1`
 	args := []any{userID}
-	if !filter.History {
-		query += ` AND is_hidden = FALSE`
-	}
 	if filter.Unread {
 		query += ` AND is_read = FALSE`
 	}
@@ -253,7 +249,7 @@ WHERE id_user = $1`
 	notifications := make([]model.Notification, 0)
 	for rows.Next() {
 		var notification model.Notification
-		if err := rows.Scan(&notification.ID, &notification.PostID, &notification.UserID, &notification.TextShow, &notification.IsRead, &notification.IsHidden, &notification.CreatedAt); err != nil {
+		if err := rows.Scan(&notification.ID, &notification.PostID, &notification.UserID, &notification.TextShow, &notification.IsRead, &notification.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan notification: %w", err)
 		}
 		notifications = append(notifications, notification)
@@ -262,11 +258,6 @@ WHERE id_user = $1`
 		return nil, fmt.Errorf("iterate notifications: %w", err)
 	}
 	return notifications, nil
-}
-
-func (r *PostgresDiscussionRepository) HideReadNotifications(ctx context.Context, userID int64) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE notifications SET is_hidden = TRUE WHERE id_user = $1 AND is_read = TRUE AND is_hidden = FALSE`, userID)
-	return discussionMutationError("hide read notifications", err)
 }
 
 func (r *PostgresDiscussionRepository) MarkNotificationsRead(ctx context.Context, userID int64) error {

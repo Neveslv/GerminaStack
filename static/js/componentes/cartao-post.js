@@ -54,9 +54,6 @@ function montarMenu(post) {
 }
 
 function montarTitulo(post, destaque) {
-    // Na página da publicação o título é o h1 da tela e não leva a lugar nenhum:
-    // um link apontando para a própria página só atrapalha quem navega por
-    // lista de links no leitor de tela.
     if (destaque) {
         return criarElemento('h1', { classe: 'gs-post-title', texto: post.title });
     }

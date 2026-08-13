@@ -49,14 +49,12 @@ function limparErros() {
     });
 }
 
-/** Valida tudo e devolve o primeiro campo inválido, ou null. */
 function validar() {
     let primeiroInvalido = null;
 
     REGRAS.forEach(({ campo, erro, validar: checar }) => {
         const elemento = document.querySelector(`#${campo}`);
 
-        // A senha não passa por trim: espaço no começo ou no fim é parte dela.
         const valor = campo.includes('senha') ? elemento.value : elemento.value.trim();
         const mensagem = checar(valor);
         if (!mensagem) return;

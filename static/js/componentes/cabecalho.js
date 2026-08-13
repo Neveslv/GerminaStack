@@ -1,25 +1,3 @@
-/**
- * Comportamento do topo, comum a todas as páginas (exceto login/cadastro).
- *
- * Faz três coisas:
- *   1. sincroniza as preferências de acessibilidade com a tabela `preferences`;
- *   2. busca as notificações uma única vez e usa o mesmo resultado tanto para
- *      o badge de não lidas quanto para o conteúdo do popover;
- *   3. liga o botão "marcar todas como lidas" dentro do popover.
- *
- * O popover reaproveita o mecanismo de menu contextual (`data-gs-menu`) que o
- * cartão de post já usa no botão "⋮" — não é uma página própria porque o
- * conteúdo (poucas linhas de texto) não justifica uma navegação inteira.
- *
- * Como o wrapper `.gs-menu` já está no HTML desde o carregamento da página, o
- * `GerminaStackUI.init(document.body)` do próprio kit (rodado antes destes
- * módulos, ver web/README.md) já cuidou de marcar `aria-haspopup`, esconder o
- * painel e ligar o clique de abrir/fechar. Chamar `inicializarKit()` de novo
- * aqui registraria um segundo listener de clique só neste trecho, e o clique
- * abriria e fecharia o menu na mesma interação — por isso esta função só
- * preenche conteúdo, nunca re-inicializa o kit.
- */
-
 import {
 	buscarMeuPerfil,
     buscarPreferencias,
@@ -50,8 +28,7 @@ async function sincronizarPreferencias() {
         guardarPreferenciasLocais(doServidor);
         aplicarPreferencias(doServidor);
     } catch {
-        // Sem resposta do servidor a tela continua com o tema local. Falhar aqui
-        // não pode derrubar a página: preferência é acessório, conteúdo não é.
+        // Sem resposta do servidor a tela continua com o tema local.
     }
 }
 

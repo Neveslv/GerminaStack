@@ -18,7 +18,6 @@
     var espacamento = ESCALA.indexOf(salvo.font_spacing) >= 0 ? salvo.font_spacing : 'normal';
     var tamanho = ESCALA.indexOf(salvo.font_size) >= 0 ? salvo.font_size : 'normal';
 
-    // O valor `normal` é a ausência do atributo: assim o CSS do kit vale sozinho.
     if (tema !== 'normal') document.documentElement.setAttribute('data-tema', tema);
     if (fonte !== 'normal') document.documentElement.setAttribute('data-fonte', fonte);
     if (espacamento !== 'normal') document.documentElement.setAttribute('data-espacamento', espacamento);

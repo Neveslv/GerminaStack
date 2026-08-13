@@ -77,8 +77,6 @@ function renderizarUsuarios(lista, eu) {
         );
         linha.append(info);
 
-        // Não pode agir sobre si mesmo, sobre outro super admin, nem — sendo
-        // admin comum — sobre quem já é admin.
         const protegido = usuario.id === eu.id
             || superAdmins.has(usuario.username)
             || (!superAdmins.has(eu.username) && usuario.is_admin);

@@ -1,7 +1,5 @@
-const FUSO_ESCOLA = 'America/Sao_Paulo';
-
 const formatadorLongo = new Intl.DateTimeFormat('pt-BR', {
-    timeZone: FUSO_ESCOLA,
+    timeZone: 'America/Sao_Paulo',
     day: '2-digit',
     month: 'long',
     year: 'numeric'

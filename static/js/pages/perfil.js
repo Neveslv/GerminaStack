@@ -56,8 +56,6 @@ function montarCartao(usuario) {
 
     identificacao.append(chips);
 
-    // O e-mail é dado pessoal: só aparece no próprio perfil, nunca no de outra
-    // pessoa, mesmo que a API mande o campo.
     if (ehMeuPerfil) {
         identificacao.append(
             criarElemento('p', { classe: 'gs-form-hint', texto: usuario.email })

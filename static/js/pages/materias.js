@@ -160,8 +160,6 @@ if ('IntersectionObserver' in window) {
 function selecionarMateria(id) {
     materiaAtiva = id;
 
-    // Troca a URL sem recarregar: o botão "voltar" do navegador continua
-    // andando entre as matérias que a pessoa visitou.
     const url = id === null ? '/materias' : `/materias?id=${id}`;
     window.history.pushState({ id }, '', url);
 

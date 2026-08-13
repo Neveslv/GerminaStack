@@ -1,4 +1,4 @@
-import { API_BASE_URL, ROTA_LOGIN, TIMEOUT_MS } from './config.js';
+import { API_BASE_URL, ROTA_LOGIN, TIMEOUT_MS, NO_CONTENT, NAO_AUTORIZADO } from './config.js';
 
 export class ErroDeApi extends Error {
     constructor(mensagem, status = 0) {
@@ -33,16 +33,16 @@ async function requisitar(caminho, opcoes = {}) {
             headers: { 'Content-Type': 'application/json', ...opcoes.headers }
         });
 
-        if (resposta.status === 401 && !caminho.startsWith('/api/login')) {
+        if (resposta.status === NAO_AUTORIZADO && !caminho.startsWith('/api/login')) {
             encerrarSessao();
-            throw new ErroDeApi('Sessão expirada.', 401);
+            throw new ErroDeApi('Sessão expirada.', NAO_AUTORIZADO);
         }
 
         if (!resposta.ok) {
             throw new ErroDeApi(await lerMensagemDeErro(resposta), resposta.status);
         }
 
-        return resposta.status === 204 ? null : await resposta.json();
+        return resposta.status === NO_CONTENT ? null : await resposta.json();
     } catch (erro) {
         if (erro instanceof ErroDeApi) throw erro;
         if (erro.name === 'AbortError') {

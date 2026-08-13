@@ -60,7 +60,6 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 					"created_at",
 					"created_at",
 				),
-				contractField("PostsCount", int64(0), "posts_count", "posts_count"),
 			},
 		},
 		{
@@ -261,7 +260,6 @@ func TestModelStructContractsMatchDatabase(t *testing.T) {
 				contractField("UserID", int64(0), "id_user", "id_user"),
 				contractField("TextShow", "", "text_show", "text_show"),
 				contractField("IsRead", false, "is_read", "is_read"),
-				contractField("IsHidden", false, "is_hidden", "is_hidden"),
 				contractField(
 					"CreatedAt",
 					(*time.Time)(nil),

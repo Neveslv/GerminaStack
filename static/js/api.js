@@ -57,17 +57,12 @@ async function requisitar(caminho, opcoes = {}) {
 export async function listarPosts({ idSubject, page = 1, pageSize = 20 } = {}) {
     const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
     if (idSubject) params.set('subject_id', String(idSubject));
-    const [resposta, materias, usuario] = await Promise.all([
+    const [pagina, materias, usuario] = await Promise.all([
         requisitar(`/api/posts?${params}`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    const pagina = normalizarPaginaDePosts(resposta);
-    const items = await Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario)));
-
-    // Mantém compatibilidade com telas/cache que ainda esperam um array,
-    // sem perder os metadados usados pela paginação nova.
-    return Object.assign(items, { items, has_more: pagina.has_more });
+    return { ...pagina, items: await Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario))) };
 }
 
 export async function listarMaterias() {
@@ -135,8 +130,7 @@ export async function buscarUsuario(username) {
 }
 
 export async function buscarSugestoesDeUsuario(prefixo) {
-    const resposta = await requisitar(`/api/users/mentions?q=${encodeURIComponent(prefixo)}`);
-    return Array.isArray(resposta) ? resposta : (Array.isArray(resposta.items) ? resposta.items : []);
+    return requisitar(`/api/users/mentions?q=${encodeURIComponent(prefixo)}`);
 }
 
 export async function salvarPerfil(dados) {
@@ -153,12 +147,11 @@ export async function definirAdmin(id, enabled) { return requisitar(`/api/admin/
 export async function excluirPost(id) { return requisitar(`/api/admin/posts/${id}`, { method: 'DELETE' }); }
 
 export async function listarPostsDoAutor(idAutor) {
-    const [resposta, materias, usuario] = await Promise.all([
+    const [pagina, materias, usuario] = await Promise.all([
         requisitar(`/api/posts?author_id=${idAutor}&page=1&page_size=100`),
         listarMaterias(),
         buscarMeuPerfil()
     ]);
-    const pagina = normalizarPaginaDePosts(resposta);
     return Promise.all(pagina.items.map((post) => normalizarPost(post, materias, usuario)));
 }
 
@@ -240,16 +233,6 @@ export async function buscarMeuPerfil() {
 function normalizarAutor(id, usuario, name, username, imageUrl, imageDescription) {
 	if (id === usuario.id) return usuario;
 	return { id, name: name || `Usuário #${id}`, username: username || null, profile_image_url: imageUrl || null, profile_image_description: imageDescription || null };
-}
-
-function normalizarPaginaDePosts(resposta) {
-    if (Array.isArray(resposta)) {
-        return { items: resposta, has_more: false };
-    }
-    return {
-        items: Array.isArray(resposta?.items) ? resposta.items : [],
-        has_more: resposta?.has_more === true
-    };
 }
 
 function normalizarMensagem(item, usuario) {

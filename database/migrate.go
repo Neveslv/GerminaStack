@@ -19,6 +19,9 @@ var twoFactorChallengesMigration string
 //go:embed migrations/0005_academic_seed.sql
 var academicSeedMigration string
 
+//go:embed migrations/0010_discussion_functions.sql
+var discussionFunctionsMigration string
+
 //go:embed migrations/0006_users_admin.sql
 var usersAdminMigration string
 
@@ -46,6 +49,9 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 	if _, err := db.ExecContext(ctx, academicSeedMigration); err != nil {
 		return fmt.Errorf("apply academic seed migration: %w", err)
+	}
+	if _, err := db.ExecContext(ctx, discussionFunctionsMigration); err != nil {
+		return fmt.Errorf("apply discussion functions migration: %w", err)
 	}
 	if _, err := db.ExecContext(ctx, notifyMentionsMigration); err != nil {
 		return fmt.Errorf("apply notifications migration: %w", err)

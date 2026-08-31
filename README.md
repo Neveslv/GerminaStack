@@ -35,8 +35,8 @@ O servidor inicia em `http://127.0.0.1:8080` por padrão e aplica as migrações
 | `DATABASE_URL` | Sim | URL PostgreSQL. |
 | `JWT_SECRET` | Sim | Segredo de sessão, mínimo de 32 bytes. |
 | `TWO_FACTOR_SECRET` | Sim | Segredo dos códigos 2FA, diferente do JWT e com mínimo de 32 bytes. |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD` | Sim | Configuração SMTP. |
-| `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME` | Sim | Remetente dos códigos. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_NAME` | Sim, quando Gmail não é usado | Configuração SMTP. |
+| `SMTP_FROM_ADDRESS` | Sim | Remetente dos códigos SMTP ou Gmail. |
 | `COOKIE_SECURE` | Não | `true` em HTTPS; `false` apenas em HTTP local. |
 | `HTTP_ADDR` | Não | Endereço HTTP; padrão `:8080`. |
 | `AUTH_OPERATION_TIMEOUT` | Não | Prazo de operações de autenticação; padrão `15s`. |
@@ -45,7 +45,7 @@ O servidor inicia em `http://127.0.0.1:8080` por padrão e aplica as migrações
 | `FROK_MODEL`, `FROK_TIMEOUT` | Não | Modelo e prazo do Frok; padrões `openai/gpt-oss-20b` e `30s`. |
 | `FROK_MONGODB_URI`, `FROK_MONGODB_DATABASE` | Não | Memória persistente do Frok; banco padrão `germinastack`. |
 
-Mesmo com Gmail API, os campos SMTP continuam obrigatórios na inicialização porque a configuração é validada antes da escolha do provedor. Não versione valores reais em `.env`.
+Configure os três campos `GOOGLE_*` juntos para usar Gmail API; nesse caso, os campos de conexão SMTP não são necessários. Não versione valores reais em `.env`.
 
 ## Rotas principais
 

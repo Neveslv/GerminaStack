@@ -54,6 +54,38 @@ func TestLoadReadsFrokMongoMemoryConfiguration(t *testing.T) {
 	}
 }
 
+func TestLoadAcceptsGmailWithoutSMTPConfiguration(t *testing.T) {
+	setValidEnvironment(t)
+	t.Setenv("SMTP_HOST", "")
+	t.Setenv("SMTP_PORT", "")
+	t.Setenv("SMTP_USERNAME", "")
+	t.Setenv("SMTP_PASSWORD", "")
+	t.Setenv("SMTP_FROM_NAME", "")
+	t.Setenv("GOOGLE_CLIENT_ID", "google-client-id")
+	t.Setenv("GOOGLE_CLIENT_SECRET", "google-client-secret")
+	t.Setenv("GOOGLE_REFRESH_TOKEN", "google-refresh-token")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v, Gmail-only configuration should be valid", err)
+	}
+	if cfg.GoogleClientID != "google-client-id" || cfg.GoogleClientSecret != "google-client-secret" || cfg.GoogleRefreshToken != "google-refresh-token" {
+		t.Fatalf("Google configuration = %#v", cfg)
+	}
+	if cfg.SMTP.FromAddress != "no-reply@example.com" {
+		t.Fatalf("SMTP FromAddress = %q, want Gmail sender address", cfg.SMTP.FromAddress)
+	}
+}
+
+func TestLoadRejectsPartialGmailConfiguration(t *testing.T) {
+	setValidEnvironment(t)
+	t.Setenv("GOOGLE_CLIENT_ID", "google-client-id")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("Load() error = nil, want incomplete Gmail configuration to be rejected")
+	}
+}
+
 func TestLoadDefaultsCookieSecureAndHTTPAddress(t *testing.T) {
 	setValidEnvironment(t)
 	t.Setenv("COOKIE_SECURE", "")

@@ -54,33 +54,52 @@ func Load() (Config, error) {
 	if err := validateAuthenticationSecrets(jwtSecret, twoFactorSecret); err != nil {
 		return Config{}, err
 	}
-	smtpHost, err := required("SMTP_HOST")
-	if err != nil {
-		return Config{}, err
+	googleClientID := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID"))
+	googleClientSecret := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET"))
+	googleRefreshToken := strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN"))
+	googleConfigured := googleClientID != "" || googleClientSecret != "" || googleRefreshToken != ""
+	if googleConfigured && (googleClientID == "" || googleClientSecret == "" || googleRefreshToken == "") {
+		return Config{}, errors.New("Google authentication configuration is incomplete")
 	}
-	smtpPortText, err := required("SMTP_PORT")
-	if err != nil {
-		return Config{}, err
-	}
-	smtpPort, err := strconv.Atoi(smtpPortText)
-	if err != nil || smtpPort < 1 || smtpPort > 65535 {
-		return Config{}, errors.New("SMTP_PORT is invalid")
-	}
-	smtpUsername, err := required("SMTP_USERNAME")
-	if err != nil {
-		return Config{}, err
-	}
-	smtpPassword, err := required("SMTP_PASSWORD")
-	if err != nil {
-		return Config{}, err
-	}
+
 	smtpFromAddress, err := required("SMTP_FROM_ADDRESS")
 	if err != nil {
 		return Config{}, err
 	}
-	smtpFromName, err := required("SMTP_FROM_NAME")
-	if err != nil {
-		return Config{}, err
+	smtpConfig := auth.SMTPConfig{FromAddress: smtpFromAddress, Timeout: 10 * time.Second}
+	if !googleConfigured {
+		smtpHost, err := required("SMTP_HOST")
+		if err != nil {
+			return Config{}, err
+		}
+		smtpPortText, err := required("SMTP_PORT")
+		if err != nil {
+			return Config{}, err
+		}
+		smtpPort, err := strconv.Atoi(smtpPortText)
+		if err != nil || smtpPort < 1 || smtpPort > 65535 {
+			return Config{}, errors.New("SMTP_PORT is invalid")
+		}
+		smtpUsername, err := required("SMTP_USERNAME")
+		if err != nil {
+			return Config{}, err
+		}
+		smtpPassword, err := required("SMTP_PASSWORD")
+		if err != nil {
+			return Config{}, err
+		}
+		smtpFromName, err := required("SMTP_FROM_NAME")
+		if err != nil {
+			return Config{}, err
+		}
+		smtpConfig.Host = smtpHost
+		smtpConfig.Port = smtpPort
+		smtpConfig.Username = smtpUsername
+		smtpConfig.Password = smtpPassword
+		smtpConfig.FromName = smtpFromName
+		if _, err := auth.NewSMTPMailer(smtpConfig); err != nil {
+			return Config{}, errors.New("SMTP configuration is invalid")
+		}
 	}
 
 	cookieSecure := true
@@ -116,19 +135,6 @@ func Load() (Config, error) {
 		frokModel = "openai/gpt-oss-20b"
 	}
 
-	smtpConfig := auth.SMTPConfig{
-		Host:        smtpHost,
-		Port:        smtpPort,
-		Username:    smtpUsername,
-		Password:    smtpPassword,
-		FromAddress: smtpFromAddress,
-		FromName:    smtpFromName,
-		Timeout:     10 * time.Second,
-	}
-	if _, err := auth.NewSMTPMailer(smtpConfig); err != nil {
-		return Config{}, errors.New("SMTP configuration is invalid")
-	}
-
 	return Config{
 		DatabaseURL:          databaseURL,
 		JWTSecret:            jwtSecret,
@@ -144,9 +150,9 @@ func Load() (Config, error) {
 			MemoryMongoURI: strings.TrimSpace(os.Getenv("FROK_MONGODB_URI")),
 			MemoryDatabase: valueOrDefault("FROK_MONGODB_DATABASE", "germinastack"),
 		},
-		GoogleClientID:     strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
-		GoogleClientSecret: strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
-		GoogleRefreshToken: strings.TrimSpace(os.Getenv("GOOGLE_REFRESH_TOKEN")),
+		GoogleClientID:     googleClientID,
+		GoogleClientSecret: googleClientSecret,
+		GoogleRefreshToken: googleRefreshToken,
 	}, nil
 }
 

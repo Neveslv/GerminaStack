@@ -65,11 +65,13 @@ func TestPostgresDiscussionRepositoryUsesDatabaseFunctions(t *testing.T) {
 	assertCatalogExpectations(t, mock)
 }
 
-func TestPostgresDiscussionRepositoryCreatesMessagesThroughDatabaseFunction(t *testing.T) {
+func TestPostgresDiscussionRepositoryCreatesPostDirectly(t *testing.T) {
 	t.Parallel()
 	db, mock := newCatalogMock(t)
-	const createQuery = `SELECT create_message($1, $2, $3, $4, $5, $6, $7)`
-	mock.ExpectQuery(regexp.QuoteMeta(createQuery)).WithArgs("post", int64(42), int64(3), "Body", "Title", nil, nil).WillReturnRows(sqlmock.NewRows([]string{"create_message"}).AddRow(int64(8)))
+	const createQuery = `INSERT INTO posts (id_user, id_subject, title, image_url, image_description, content)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id`
+	mock.ExpectQuery(regexp.QuoteMeta(createQuery)).WithArgs(int64(42), int64(3), "Title", nil, nil, "Body").WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(int64(8)))
 	mock.ExpectQuery("SELECT p.id, p.id_user, p.id_subject, p.title").WithArgs(int64(8)).WillReturnRows(
 		sqlmock.NewRows([]string{"id", "id_user", "id_subject", "title", "image_url", "image_description", "content", "likes", "dislikes", "comments_count", "author_name", "author_username", "author_image_url", "author_image_description", "created_at"}).
 			AddRow(int64(8), int64(42), int64(3), "Title", nil, nil, "Body", int64(0), int64(0), int64(0), "Ana", "ana", nil, nil, nil),

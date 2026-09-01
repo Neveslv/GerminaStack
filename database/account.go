@@ -6,14 +6,15 @@ import (
 	"errors"
 	"fmt"
 
+	"germinaStack/domain/account"
 	"germinaStack/model"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var (
-	ErrAccountNotFound     = errors.New("account not found")
-	ErrPreferencesNotFound = errors.New("preferences not found")
+	ErrAccountNotFound     = account.ErrNotFound
+	ErrPreferencesNotFound = account.ErrPreferencesNotFound
 )
 
 type PostgresAccountRepository struct{ db *sql.DB }

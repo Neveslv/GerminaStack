@@ -8,21 +8,17 @@ import (
 	"time"
 
 	"germinaStack/auth"
-	"germinaStack/database"
+	"germinaStack/domain/users"
 
 	"github.com/gin-gonic/gin"
 )
 
-type UserRepository interface {
-	CreateUser(context.Context, database.UserRegistration) (database.User, error)
-}
-
 type UserHandler struct {
-	repository       UserRepository
+	repository       users.Repository
 	operationTimeout time.Duration
 }
 
-func NewUserHandler(repository UserRepository, operationTimeout time.Duration) *UserHandler {
+func NewUserHandler(repository users.Repository, operationTimeout time.Duration) *UserHandler {
 	return &UserHandler{repository: repository, operationTimeout: operationTimeout}
 }
 
@@ -64,7 +60,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 
 	operationContext, cancel := context.WithTimeout(c.Request.Context(), h.operationTimeout)
 	defer cancel()
-	user, err := h.repository.CreateUser(operationContext, database.UserRegistration{
+	user, err := h.repository.CreateUser(operationContext, users.Registration{
 		YearID:       request.YearID,
 		Name:         identity.Name,
 		Username:     identity.Username,
@@ -76,9 +72,9 @@ func (h *UserHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusCreated, userResponse{
 			ID: user.ID, YearID: user.YearID, Name: user.Name, Username: user.Username, Email: user.Email, IsAdmin: user.IsAdmin,
 		})
-	case errors.Is(err, database.ErrCredentialConflict):
+	case errors.Is(err, users.ErrCredentialConflict):
 		c.JSON(http.StatusConflict, gin.H{"error": "e-mail ou usu\u00e1rio j\u00e1 cadastrado"})
-	case errors.Is(err, database.ErrYearNotFound):
+	case errors.Is(err, users.ErrYearNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": "ano n\u00e3o encontrado"})
 	default:
 		log.Printf("user registration failed: %v", err)

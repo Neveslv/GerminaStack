@@ -7,27 +7,19 @@ import (
 	"time"
 
 	"germinaStack/auth"
-	"germinaStack/database"
+	"germinaStack/domain/moderation"
+	"germinaStack/domain/pagination"
 	"germinaStack/model"
 
 	"github.com/gin-gonic/gin"
 )
 
-type AdminRepository interface {
-	ListUsers(context.Context, database.AdminFilter) ([]model.User, int, error)
-	ListPosts(context.Context, database.AdminFilter) ([]database.AdminPost, int, error)
-	GetUser(context.Context, int64) (model.User, error)
-	SetBanned(context.Context, int64, bool) error
-	SetAdmin(context.Context, int64, bool) error
-	DeletePost(context.Context, int64) error
-}
-
 type AdminHandler struct {
-	repository       AdminRepository
+	repository       moderation.Repository
 	operationTimeout time.Duration
 }
 
-func NewAdminHandler(repository AdminRepository, operationTimeout time.Duration) *AdminHandler {
+func NewAdminHandler(repository moderation.Repository, operationTimeout time.Duration) *AdminHandler {
 	return &AdminHandler{repository: repository, operationTimeout: operationTimeout}
 }
 
@@ -150,24 +142,24 @@ func decodeAdminInput(c *gin.Context, target any) bool {
 	}
 	return true
 }
-func adminFilter(c *gin.Context) (database.AdminFilter, bool) {
+func adminFilter(c *gin.Context) (moderation.Filter, bool) {
 	search := c.Query("q")
 	if len(search) > 100 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "requisição inválida"})
-		return database.AdminFilter{}, false
+		return moderation.Filter{}, false
 	}
-	pagination, err := database.ParsePagination(c.Query("page"), "5")
+	pagination, err := pagination.Parse(c.Query("page"), "5")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "requisição inválida"})
-		return database.AdminFilter{}, false
+		return moderation.Filter{}, false
 	}
-	return database.AdminFilter{Search: search, Pagination: pagination}, true
+	return moderation.Filter{Search: search, Pagination: pagination}, true
 }
 func isSuperAdmin(username string) bool {
 	return username == "nicolas.oliveira" || username == "matheus.fazan"
 }
 func writeAdminError(c *gin.Context, err error) {
-	if errors.Is(err, database.ErrAdminUserNotFound) {
+	if errors.Is(err, moderation.ErrUserNotFound) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "usuário não encontrado"})
 		return
 	}

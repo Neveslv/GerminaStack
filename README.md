@@ -85,6 +85,8 @@ node --check static/js/api.js
 
 ## Estrutura
 
+O backend continua sendo um monolito modular. `domain/` concentra os contratos das areas de negocio; `database/` fornece as implementacoes PostgreSQL e `handlers/` traduz HTTP para esses contratos.
+
 ```text
 auth/       autenticação, 2FA e provedores de e-mail
 config/     leitura e validação das variáveis de ambiente

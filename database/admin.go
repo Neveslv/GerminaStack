@@ -6,23 +6,16 @@ import (
 	"errors"
 	"fmt"
 
+	"germinaStack/domain/moderation"
 	"germinaStack/model"
 )
 
-var ErrAdminUserNotFound = errors.New("admin user not found")
+var ErrAdminUserNotFound = moderation.ErrUserNotFound
 
 type PostgresAdminRepository struct{ db *sql.DB }
 
-type AdminFilter struct {
-	Search     string
-	Pagination Pagination
-}
-type AdminPost struct {
-	ID             int64  `json:"id"`
-	Title          string `json:"title"`
-	AuthorName     string `json:"author_name"`
-	AuthorUsername string `json:"author_username"`
-}
+type AdminFilter = moderation.Filter
+type AdminPost = moderation.Post
 
 func NewPostgresAdminRepository(db *sql.DB) *PostgresAdminRepository {
 	return &PostgresAdminRepository{db: db}

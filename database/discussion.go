@@ -85,7 +85,7 @@ FROM comments c JOIN users u ON u.id = c.id_user WHERE c.id = $1`
 
 func (r *PostgresDiscussionRepository) CreateComment(ctx context.Context, userID, postID int64, input CommentInput) (model.Comment, error) {
 	var commentID int64
-	err := r.db.QueryRowContext(ctx, `SELECT create_message($1, $2, $3, $4, NULL, NULL, NULL)`, "comment", userID, postID, input.Content).Scan(&commentID)
+	err := r.db.QueryRowContext(ctx, `INSERT INTO comments (id_post, id_user, content) VALUES ($1, $2, $3) RETURNING id`, postID, userID, input.Content).Scan(&commentID)
 	if err != nil {
 		return model.Comment{}, discussionMutationError("create comment", err)
 	}
@@ -116,7 +116,7 @@ FROM comments_on_comments c JOIN users u ON u.id = c.id_user WHERE c.id = $1`
 
 func (r *PostgresDiscussionRepository) CreateReply(ctx context.Context, userID, commentID int64, input CommentInput) (model.CommentOnComment, error) {
 	var replyID int64
-	err := r.db.QueryRowContext(ctx, `SELECT create_message($1, $2, $3, $4, NULL, NULL, NULL)`, "comment_on_comment", userID, commentID, input.Content).Scan(&replyID)
+	err := r.db.QueryRowContext(ctx, `INSERT INTO comments_on_comments (id_comment, id_user, content) VALUES ($1, $2, $3) RETURNING id`, commentID, userID, input.Content).Scan(&replyID)
 	if err != nil {
 		return model.CommentOnComment{}, discussionMutationError("create reply", err)
 	}

@@ -97,7 +97,8 @@ async function carregarPosts(silencioso = false) {
     if (!silencioso) estado.carregando('Carregando publicações…');
 
     try {
-        postsCarregados = await listarPosts({ idSubject: filtros.idSubject });
+        const ocultados = new Set(JSON.parse(localStorage.getItem('posts-ocultados') || '[]'));
+        postsCarregados = (await listarPosts({ idSubject: filtros.idSubject })).filter((post) => !ocultados.has(post.id));
         if (!filtros.idSubject) renderizarTrending(postsCarregados);
         await renderizarFeed();
     } catch (erro) {
@@ -169,8 +170,8 @@ async function carregarMaterias() {
     }
 }
 
-function copiarTextoDoPost(post) {
-    navigator.clipboard?.writeText(post.content);
+async function copiarTextoDoPost(post) {
+    try { await navigator.clipboard.writeText(post.content); } catch { return; }
     window.GerminaStackUI?.showToast({
         title: 'Texto copiado',
         message: 'O conteúdo da publicação foi copiado.',
@@ -179,6 +180,9 @@ function copiarTextoDoPost(post) {
 }
 
 function ocultarPost(idPost) {
+    const ocultados = new Set(JSON.parse(localStorage.getItem('posts-ocultados') || '[]'));
+    ocultados.add(idPost);
+    localStorage.setItem('posts-ocultados', JSON.stringify([...ocultados]));
     postsCarregados = postsCarregados.filter((post) => post.id !== idPost);
     renderizarFeed();
     window.GerminaStackUI?.showToast({

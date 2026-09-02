@@ -20,11 +20,12 @@ const idPost = new URLSearchParams(window.location.search).get('id');
 
 function estaEscrevendoResposta() {
     const campo = document.activeElement;
-    return (campo instanceof HTMLInputElement || campo instanceof HTMLTextAreaElement) && campo.value.trim() !== '';
+    return (formulario && !formulario.hidden) || thread?.querySelector('form:not([hidden])') ||
+        ((campo instanceof HTMLInputElement || campo instanceof HTMLTextAreaElement) && campo.value.trim() !== '');
 }
 
-function copiarTextoDoPost(post) {
-    navigator.clipboard?.writeText(post.content);
+async function copiarTextoDoPost(post) {
+    try { await navigator.clipboard.writeText(post.content); } catch { return; }
     window.GerminaStackUI?.showToast({
         title: 'Texto copiado',
         message: 'O conteúdo da publicação foi copiado.',
@@ -40,6 +41,9 @@ function ligarMenuDaPublicacao(post) {
         if (botao.dataset.action === 'copiar-post') copiarTextoDoPost(post);
 
         if (botao.dataset.action === 'ocultar-post') {
+            const ocultados = new Set(JSON.parse(localStorage.getItem('posts-ocultados') || '[]'));
+            ocultados.add(Number(post.id));
+            localStorage.setItem('posts-ocultados', JSON.stringify([...ocultados]));
             window.GerminaStackUI?.showToast({
                 title: 'Publicação ocultada',
                 message: 'Você não vai mais ver essa publicação no feed.',

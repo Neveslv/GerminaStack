@@ -90,11 +90,15 @@ export async function listarComentarios(idPost) {
         requisitar(`/api/posts/${idPost}/comments`),
         buscarMeuPerfil()
     ]);
-    return Promise.all(comentarios.map(async (comentario) => ({
-        ...normalizarMensagem(comentario, usuario),
-        replies: (await requisitar(`/api/comments/${comentario.id}/replies`))
-            .map((resposta) => normalizarMensagem(resposta, usuario))
-    })));
+    return Promise.all(comentarios.map(async (comentario) => {
+        try {
+            const replies = await requisitar(`/api/comments/${comentario.id}/replies`);
+            return { ...normalizarMensagem(comentario, usuario), replies: replies.map((resposta) => normalizarMensagem(resposta, usuario)) };
+        } catch (erro) {
+            console.error(`Não foi possível carregar as respostas do comentário ${comentario.id}.`, erro);
+            return { ...normalizarMensagem(comentario, usuario), replies: [] };
+        }
+    }));
 }
 
 export async function entrar(credenciais) {

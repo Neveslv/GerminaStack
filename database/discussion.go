@@ -52,7 +52,9 @@ FROM posts p JOIN users u ON u.id = p.id_user WHERE p.id = $1`
 
 func (r *PostgresDiscussionRepository) CreatePost(ctx context.Context, userID int64, input PostInput) (model.Post, error) {
 	var postID int64
-	err := r.db.QueryRowContext(ctx, `SELECT create_message($1, $2, $3, $4, $5, $6, $7)`, "post", userID, input.SubjectID, input.Content, input.Title, input.ImageURL, input.ImageDescription).Scan(&postID)
+	err := r.db.QueryRowContext(ctx, `INSERT INTO posts (id_user, id_subject, title, image_url, image_description, content)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id`, userID, input.SubjectID, input.Title, input.ImageURL, input.ImageDescription, input.Content).Scan(&postID)
 	if err != nil {
 		return model.Post{}, discussionMutationError("create post", err)
 	}
